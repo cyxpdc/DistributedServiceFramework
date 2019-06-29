@@ -90,3 +90,24 @@ IMServerProcessor：使用ChannelGroup代表当前用户数，封装了真正的
 后端获取自定义属性,判断是否能刷花，即60秒之内不允许重复刷鲜花
 ```
 
+# 基于BIO的简易RPC框架
+
+类简介：
+
+ConsumerProxy：服务消费者代理类
+
+ProviderReflect：服务发布类
+
+HelloService：测试接口
+
+HelloServiceImpl：测试接口实现类
+
+RpcProviderMain：发布服务测试类
+
+RpcConsumerMain：服务调用测试类
+
+用法：
+
+> 定义好接口和实现类，然后创建实现类对象，使用ProviderReflect.provider(实现类, 8083);启动，即可发布服务
+>
+> 调用则使用ConsumerProxy.consume(接口.class, "ip", 端口);来获取接口代理类，调用想要的方法即可
