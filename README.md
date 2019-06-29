@@ -92,22 +92,36 @@ IMServerProcessor：使用ChannelGroup代表当前用户数，封装了真正的
 
 # 基于BIO的简易RPC框架
 
+功能：支持一个服务的发布
+
 类简介：
 
-ConsumerProxy：服务消费者代理类
-
-ProviderReflect：服务发布类
-
-HelloService：测试接口
-
-HelloServiceImpl：测试接口实现类
-
-RpcProviderMain：发布服务测试类
-
-RpcConsumerMain：服务调用测试类
+> ConsumerProxy：服务消费者代理类，使用动态代理创建接口的代理类
+>
+> ProviderReflect：服务发布类，使用线程池技术，给一个请求开一个线程
+>
+> HelloService：测试接口
+>
+> HelloServiceImpl：测试接口实现类
+>
+> RpcProviderMain：发布服务测试类
+>
+> RpcConsumerMain：服务调用测试类
 
 用法：
 
 > 定义好接口和实现类，然后创建实现类对象，使用ProviderReflect.provider(实现类, 8083);启动，即可发布服务
 >
 > 调用则使用ConsumerProxy.consume(接口.class, "ip", 端口);来获取接口代理类，调用想要的方法即可
+
+原理：
+
+> 内部通过Socket交互：
+>
+> 使用ConsumerProxy#consume时，返回一个JDK动态代理对象，调用方法时，触发invoke方法，发起socket；
+>
+> ProviderReflect#provider启动后一直阻塞，直到ConsumerProxy#consume发起socket；
+>
+> ConsumerProxy#consume将方法名和参数写入到socket，交给ProviderReflect#provider；
+>
+> ProviderReflect#provider获取到方法名和参数后，通过反射调用方法获取返回结果，将结果写入到socket，返回给ConsumerProxy#consume，该返回结果就是接口实现类方法的返回结果了
