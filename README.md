@@ -125,3 +125,25 @@ IMServerProcessor：使用ChannelGroup代表当前用户数，封装了真正的
 > ConsumerProxy#consume将方法名和参数写入到socket，交给ProviderReflect#provider；
 >
 > ProviderReflect#provider获取到方法名和参数后，通过反射调用方法获取返回结果，将结果写入到socket，返回给ConsumerProxy#consume，该返回结果就是接口实现类方法的返回结果了
+
+
+
+
+
+# 分布式服务框架开发
+
+## 1.分布式服务框架总体结构与功能
+
+面向SOA；可以简单地认为，RPC+服务治理(服务依赖梳理、负载均衡、服务分组灰度发布、链路监控、服务质量统计、服务自动发现、自动下线与服务注册中心等功能)，就构成了一套完整的分布式服务框架，分布式服务框架是SOA能够最终成功落地实现价值交付的技术保障
+
+主要组成：服务消费端、服务提供端、服务数据网络传输的序列化与反序列化、服务数据的通信机制、服务注册中心、服务治理
+
+服务的引入与发布，即服务消费端与提供段：使用Spring来实现
+
+服务数据网络传输的序列化与反序列化：Java默认序列化、XML、JSON、Hessian、protostuff、Thrift、Avro等
+
+服务数据的通信机制：Netty
+
+服务注册中心：Zookeeper，用来实现服务注册、服务发现、服务自动上下线
+
+服务治理：编码手段    待补充
