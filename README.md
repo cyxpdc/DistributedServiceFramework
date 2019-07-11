@@ -147,3 +147,98 @@ IMServerProcessor：使用ChannelGroup代表当前用户数，封装了真正的
 服务注册中心：Zookeeper，用来实现服务注册、服务发现、服务自动上下线
 
 服务治理：编码手段    待补充
+
+## 2.分布式服务框架序列化与反序列化实现
+
+### 实现自己的序列化工具引擎
+
+目的：整合9种序列化解决方案，可以通过输入不同配置随意选择使用哪一种解决方案
+
+SerializerEngine：主类，通过传入参数serializeType的方式，可以自由选择具体的序列化/反序列化方案
+
+SerializeType：序列化类型枚举
+
+## 3.实现与Spring的集成
+
+使用Spring来管理远程服务的发布与引入，实现了远程服务调用编程界面与本地Bean方法调用的一致性，屏蔽了远程服务调用与本地方法调用的差异性
+
+- 类简介
+
+服务发布：
+
+ProviderFactoryBean：组合了服务提供者本身的属性，然后将服务提供者按照方法的粒度拆分，注册到Zookeeper；即为服务Bean的发布入口；然后使用了NettyServer
+
+NettyServer：Netty服务端，将服务对外发布出去，使其能够接受外部其他机器的调用请求
+
+服务引入：
+
+RevokerFactoryBean：组合了远程服务引入相关的的属性，引入远程服务，将服务提供者拉到本地缓存、注册服务消费者信息(服务治理用的)
+![1561949523390](F:/markdownPicture/assets/1561949523390.png)
+
+- 使用示例
+
+服务发布:
+
+1.自定义接口HelloService和实现类HelloServiceImpl
+
+2.xml配置：将HelloService作为远程服务发布出去
+![1561951483539](F:/markdownPicture/assets/1561951483539.png)
+![1562029746423](F:/markdownPicture/assets/1562029746423.png)
+
+服务引入：
+
+1.xml配置：引入HelloService。这里配置好了接口后，在RevokerFactoryBean中得到匹配此接口的服务提供者列表，再根据软负载均衡策略选取一个服务提供者代理对象，发起调用
+![1561951673185](F:/markdownPicture/assets/1561951673185.png)
+
+最后由MainClient和MainServer进行测试
+
+- 通过自定义标签简化xml配置
+
+1.定义自定义标签的命名空间、路径和构成规则：定义remote-reference.xsd文件、remote-service.xsd文件（主要是配置RevokerFactoryBean和ProviderFactoryBean的属性）
+然后由spring.schemas文件引入xsd文件，再由spring.handlers文件定义解析自定义标签工具类AresRemoteReferenceNamespaceHandler和AresRemoteServiceNamespaceHandler
+
+2.AresRemoteReferenceNamespaceHandler中，扩展NamespaceHandlerSupport类，覆盖init方法
+方法中，由RevokerFactoryBeanDefinitionParser来解析远程服务引入的自定义标签，获得xml标签配置的属性值，写入到远程服务引入的Bean中，完成构建
+
+3.AresRemoteServiceNamespaceHandler中，由ProviderFactoryBeanDefinitionParser来执行解析服务发布自定义标签，获得xml标签配置的属性值，写入到服务发布的Bean中，完成构建
+
+4.最后，xml进行服务的发布和引入配置即可
+发布服务：
+
+```xml
+<!-- 发布远程服务的，配置的属性会注入到此bean中 -->
+<bean id="helloService" class="ares.remoting.test.HelloServiceImpl"/>
+<AresServer:service id="helloServiceRegister"
+                    interface="ares.remoting.test.HelloService"
+                    ref="helloService"
+                    groupName="default"
+                    weight="2"
+                    appKey="ares"
+                    workerThreads="100"
+                    serverPort="8081"
+                    timeout="600"/>
+```
+
+引入服务：
+
+```xml
+<!-- 引入远程服务，配置的属性会注入到此bean中 -->
+<AresClient:reference id="remoteHelloService"
+                      interface="ares.remoting.test.HelloService"
+                      clusterStrategy="WeightRandom"
+                      remoteAppKey="ares"
+                      groupName="default"
+                      timeout="3000"/>
+```
+
+最后由MainClient和MainServer进行测试
+
+流程：
+
+> 远程服务发布到Zookeeper，服务调用方则拉取服务提供者信息到本地，得到匹配服务接口的服务提供者列表，再根据软负载策略选取其中一个服务提供者，通过Netty发起RPC调用过程
+
+- 功能：
+
+灰度发布：ProviderFactoryBean的groupName字段
+
+软负载：ProviderFactoryBean的weight字段
