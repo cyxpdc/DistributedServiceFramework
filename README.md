@@ -242,3 +242,20 @@ RevokerFactoryBean：组合了远程服务引入相关的的属性，引入远�
 灰度发布：ProviderFactoryBean的groupName字段
 
 软负载：ProviderFactoryBean的weight字段
+
+## 4.分布式服务框架注册中心
+
+- 类简介
+
+IRegisterCenter4Provider：服务端注册中心接口
+
+IRegisterCenter4Invoker：消费端注册中心接口
+
+RegisterCenter：
+注册中心，实现了IRegisterCenter4Provider和IRegisterCenter4Invoker接口；
+ZkClient需要使用volatile；registerProvider方法需要加锁；
+服务提供者信息的路径为：ZK命名空间/当前部署应用APP命名空间/ groupName/serviceNode(服务接口名)/PROVIDER_TYPE，为永久节点
+服务器节点：服务提供者信息的路径 + "/" + localIp + "|" + serverPort + "|" + weight + "|" + workerThreads + "|" + groupName;，即为最后的子节点，设置为临时节点，用来自动上下线
+
+此处只实现了下线的更新，算法为：
+创建一个新列表，当前列表和旧列表对比，如果当前列表包含有旧列表的ip，则加入新列表，并移除当前列表的当前ip；然后将剩下的ip封装为ProviderService即可；最后返回新列表的map
