@@ -259,3 +259,61 @@ ZkClient需要使用volatile；registerProvider方法需要加锁；
 
 此处只实现了下线的更新，算法为：
 创建一个新列表，当前列表和旧列表对比，如果当前列表包含有旧列表的ip，则加入新列表，并移除当前列表的当前ip；然后将剩下的ip封装为ProviderService即可；最后返回新列表的map
+
+## 5.分布式服务框架底层通信实现
+
+关于同步异步阻塞非阻塞：
+同步阻塞，可以看作等待IO时，啥都不能做；同步非阻塞，可以看作等待IO时，可以做其他的；异步非阻塞，可以看作不用等待IO，直接做其他的，IO好了会通知我
+
+- 服务端
+
+NettyServer：提供启动Netty服务的方法，相对应的编解码处理器及服务端业务逻辑处理器
+
+NettyServerInvokeHandler：服务端逻辑处理器，根据解码得到的Java请求对象确定服务提供者接口及方法，通过反射来调用；
+使用了Semaphore来做流控处理，控制了服务端的服务能力(亮点)
+
+NettyDecoderHandler：解码器，负责将字节数组解码为Java对象
+
+NettyEncoderHandler：编码器，负责将Java对象序列化为字节数组
+
+编解码器使用自定义方式解决来粘包/半包问题(亮点)
+
+- 客户端
+
+问题：
+
+> 1.选择合适的序列化协议，解决粘包/半包问题
+
+在编解码器中已解决：使用int数据类型来记录整个消息的字节数组长度，然后将该int数据作为消息的消息头一起传输；服务端接收消息数据时，先接收4个字节的int数据类型数据，此数据即为整个消息字节数组的长度，再接收剩余字节，直到接收的字节数组长度等于最先接收的int数据类型数据大小，即字节数组的长度
+
+> 2.发挥长连接的优势，对Netty的Channel通道进行复用
+
+NettyChannelPoolFactory：Channel连接池工厂类，为每一个服务提供者地址预先生成一个保存Channel的阻塞队列ArrayBlockingQueue(亮点)
+
+> 3.客户端发起服务调用后需要同步等待调用结果，但是Netty是异步框架，所以需要自己实现同步等待机制(为了保证顺序)
+
+为每次请求新建一个阻塞队列，返回结果的时候，存入该阻塞队列，若在超时时间内返回结果值，则调用端将该返回结果从阻塞队列中取出返回给调用方，否则超时返回null(亮点)
+
+AresRequest：客户端请求，封装了唯一标识、服务提供者信息、调用的方法名称、传递参数、消费端应用名、消费请求超时时长
+
+AresResponse：服务端响应，封装了唯一标识、超时时间、返回的结果对象
+
+AresResponseWrapper：异步调用返回结果AresResponse的包装类，由保存返回结果的阻塞队列和返回时间组成；同时定义了判断返回结果是否超时过期的方法isExpire()；用来实现对Netty发起异步调用后同步等待功能
+
+RevokerResponseHolder：保存及操作返回结果的数据容器类
+
+> AresResponse、AresResponseWrapper、RevokerResponseHolder即同步等待Netty调用结果返回的数据结构定义，接下来将在NettyChannelPoolFactory中实现客户端业务逻辑处理器NettyClientInvokerHandler，在NettyClientInvokerHandler中获取Netty异步调用返回的结果，并将该结果保存到RevokerResponseHolder
+
+NettyClientInvokerHandler：将Netty异步返回的结果存入阻塞队列,以便调用端同步获取
+
+RevokerServiceCallable：Netty客户端发起服务调用类
+
+通过Netty客户端发起一次调用，并得到调用返回结果的流程：
+
+> 1.从服务注册中心获取服务提供者列表，通过服务端配置的软负载算法参数选择某一个服务提供者
+>
+> 2.根据服务提供者信息从Netty连接池中获取对应的Channel连接：RevokerServiceCallable#call
+>
+> 3.将服务请求数据对象通过某种序列化协议编码成字节数组，通过通道Channel发送到服务端：NettyChannelPoolFactory#registerChannel
+>
+> 4.同步等待服务端返回调用结果，最终完成一次服务调用：RevokerServiceCallable#call
