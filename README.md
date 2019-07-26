@@ -317,3 +317,37 @@ RevokerServiceCallable：Netty客户端发起服务调用类
 > 3.将服务请求数据对象通过某种序列化协议编码成字节数组，通过通道Channel发送到服务端：NettyChannelPoolFactory#registerChannel
 >
 > 4.同步等待服务端返回调用结果，最终完成一次服务调用：RevokerServiceCallable#call
+
+## 6.分布式服务框架软负载实现
+
+框架的负载均衡通过软件算法来实现，因此称为软负载
+
+也可以使用基于ZooKeeper的负载均衡算法，参考《ZooKeeper》笔记
+
+- 实现原理
+
+在消费端实现：
+
+1.服务消费端在应用启动时从Zookeeper获取服务提供者列表，缓存到服务调用端本地缓存
+
+2.服务消费端发起服务调用之前，先通过某种策略或算法从服务提供者列表本地缓存中选择本次调用的目标机器，再发起服务调用，从而完成负载均衡的功能
+
+类：cluster包下，跟序列化一样，可以通过配置选择自己想要的负载均衡算法，都使用了策略模式、门面模式
+
+- 框架中的应用：
+
+RevokerProxyBeanFactory：远程服务在服务消费端的动态代理实现
+
+- 完整的远程通信逻辑
+
+> 1.从服务注册中心获取服务提供者列表，通过服务端配置的软负载算法参数clusterStrategy，作为方法ClusterEngine.queryClusterStrategy的参数，获取到具体的算法实现clusterStrategyService，调用clusterStrategyService.select方法选择某一个服务提供者
+>
+> 2.组装服务调用请求AresRequest对象
+>
+> 3.异步提交调用请求：
+> 根据服务提供者信息从Netty连接池中获取对应的Channel连接：RevokerServiceCallable#call；
+> 将服务请求数据对象通过某种序列化协议编码成字节数组，通过通道Channel发送到服务端：NettyChannelPoolFactory#registerChannel
+>
+> 4.服务端NettyServer接收到请求后，NettyServerInvokeHandler进行处理，返回给客户端接口方法调用的结果
+>
+> 5.客户端通过阻塞队列机制同步等待请求返回结果
