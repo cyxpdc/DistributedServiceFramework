@@ -13,10 +13,10 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <spring.version>4.0.9.RELEASE</spring.version>
+        <spring.version>5.2.0.RELEASE</spring.version>
         <aspectj.version>1.8.0</aspectj.version>
         <guava.version>19.0</guava.version>
-        <fastjson.version>1.2.12</fastjson.version>
+        <fastjson.version>1.2.25</fastjson.version>
     </properties>
 
 
@@ -144,7 +144,7 @@
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-all</artifactId>
-            <version>4.1.7.Final</version>
+            <version>4.1.42.Final</version>
         </dependency>
 
         <!-- Protostuff -->
