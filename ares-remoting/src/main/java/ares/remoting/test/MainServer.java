@@ -3,7 +3,7 @@ package ares.remoting.test;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 /**
- * @author pdc
+ * @author pdc 
  */
 public class MainServer {
 
