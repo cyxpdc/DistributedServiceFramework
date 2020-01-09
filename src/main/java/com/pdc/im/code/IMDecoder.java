@@ -14,6 +14,7 @@ import java.util.regex.Pattern;
 
 /**
  * 自定义IM协议的编码器
+ * @author pdc
  */
 public class IMDecoder extends ByteToMessageDecoder {
 

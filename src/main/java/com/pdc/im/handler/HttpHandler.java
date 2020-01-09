@@ -12,7 +12,7 @@ import java.net.URL;
 
 /**
  * MyImServer中addLast了此Handler
- * author PDC
+ * @author PDC
  */
 public class HttpHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
 
@@ -31,7 +31,7 @@ public class HttpHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
     //此处加载静态文件
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest request) {
-        String uri = request.getUri();
+        String uri = request.uri();
         String fileName = uri.equals("/") ? DEFAULT_HOME : uri;
         RandomAccessFile file = null;
         try {

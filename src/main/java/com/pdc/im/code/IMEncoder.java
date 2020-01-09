@@ -12,6 +12,7 @@ import org.msgpack.MessagePack;
  * MessageToByteEncoder,先序列化，就能传输了
  * netty内置对象都是如此，都经过了编码解码的过程
  * 因为IMMessage是自定义对象，所以同样也需要自定义编码解码器
+ * @author pdc
  */
 public class IMEncoder extends MessageToByteEncoder<IMMessage> {
 

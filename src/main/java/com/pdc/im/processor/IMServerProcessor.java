@@ -15,7 +15,7 @@ import io.netty.util.concurrent.GlobalEventExecutor;
 /**
  * 主要用于自定义协议内容的逻辑处理
  * 服务端的处理器
- *
+ * @author pdc
  */
 public class IMServerProcessor {
     /**

@@ -22,14 +22,11 @@ MyHandler：实现ChannelInboundHandlerAdapter，处理客户端请求，channel
 
 Client功能：发送表情、文字；登陆退出、送赞。
 
-![](H:\ideaCode\nettyWebServer\1.png)
-
 ### 2.实现思路：
 
 Server里有一个pipeline，pipeline里用许多Handler处理，如HttpHandler、WebSocketHandler、自定义协议的IMPHandler，根据判断来调用Handler；
 使用异步处理，结果最终返回给客户端，客户端需要使用**WebSocket**，实现实时交互
 
-![](H:\ideaCode\nettyWebServer\2.png)
 ### 3.类简介
 
 MyImServer：服务端
@@ -51,15 +48,11 @@ IMServer启动后，每来一个请求，则新开一个线程，跑childHandler
 childHandler方法中，有三个处理器：WebSocketHandler、HttpHandler、SocketHandler
 1.WebSocketHandler将前端传来的数据交给IMServerProcessor处理，如登录、聊天、送鲜花，此handler主要用来确保系统使用WebSocket协议；
 2.HTTPHandler则负责解析HTTP，填充response；
-3.SocketHandler主要用来确保系统使用自定义协议，此时，需要自定义编码解码器，为IMEncoder和IMDecoder，即序列化和反序列化的过程，会调用IMDecoder#decode和IMEncoder#encode（此处的序列化框架为msgpack）；(其实在这里并没有用上)
-
-- 实际上，用到的只有IMDecoder#decode(读取堆外内存)、WebSocketHandler(处理业务)、HttpHandler(解析HTTP)
-  自定义的SocketHandler#channelRead0、IMDecoder#encode并没有用到
-  先走IMDecoder#decode，再走HttpHandler，然后开始业务操作，即走WebSocketHandler
+3.SocketHandler则使用普通的socket协议
 
 接下来，用户开始操作，操作过程中，起作用的只有WebSocketHandler#channelRead0
 
-IMEncoder和IMDecoder还用在IMServerProcessor中：接收到字符串时，使用自定义的IMDecoder#decode，发送到浏览器时，使用自定义的IMEncoder#encode。
+IMEncoder和IMDecoder用在IMServerProcessor中：接收到字符串时，使用自定义的IMDecoder#decode，发送到浏览器时，使用自定义的IMEncoder#encode。
 重写的decode则在
 
 IMMessage：实体类，每一个命令代表一个IMMessage

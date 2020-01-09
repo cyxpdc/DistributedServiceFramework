@@ -10,7 +10,7 @@ import org.apache.log4j.Logger;
 /**
  * 本地协议，发送一个IMMessage对象，能直接在网页上接收，这样就能跨平台
  * 协议跑socket即可
- * author pdc
+ * @author pdc
  */
 public class SocketHandler extends SimpleChannelInboundHandler<IMMessage>{
 

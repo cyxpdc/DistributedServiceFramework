@@ -19,12 +19,11 @@ import io.netty.handler.stream.ChunkedWriteHandler;
 import org.apache.log4j.Logger;
 
 /**
- * author PDC
+ * @author PDC
  */
 public class MyImServer {
 
     private static Logger LOG = Logger.getLogger(MyImServer.class);
-
 
     private final int port = 8888;
 
@@ -47,8 +46,7 @@ public class MyImServer {
                         //无锁化串行编程,类似栈的调用，压到last，调用也是从last开始
                         protected void initChannel(SocketChannel client) {
                             //业务逻辑链
-                            client.pipeline()
-                                    /** 支持自定义socket协议 */
+                            client.pipeline()/** 支持自定义socket协议 */
                                 .addLast(new IMDecoder())
                                 .addLast(new IMEncoder())
                                 .addLast(new SocketHandler())

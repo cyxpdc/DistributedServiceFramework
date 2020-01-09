@@ -1,7 +1,7 @@
 package com.pdc.im.protocol;
 
 /**
- * author PDC
+ * @author PDC
  */
 public enum IMProtocol {
     /** 系统消息 */

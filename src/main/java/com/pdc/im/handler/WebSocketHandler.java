@@ -10,7 +10,7 @@ import org.apache.log4j.Logger;
 /**
  * MyImServer中addLast了此Handler
  * TextWebSocketFrame定义了和前端WebSocket的交互
- * author PDC
+ * @author PDC
  */
 public class WebSocketHandler extends SimpleChannelInboundHandler<TextWebSocketFrame> {
 

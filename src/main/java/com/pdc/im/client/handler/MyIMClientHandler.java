@@ -11,7 +11,7 @@ import java.util.Scanner;
 
 /**
  * 聊天客户端逻辑实现
- * @author Tom
+ * @author pdc
  *
  */
 public class MyIMClientHandler extends ChannelInboundHandlerAdapter{

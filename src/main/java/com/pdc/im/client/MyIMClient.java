@@ -13,7 +13,7 @@ import java.io.IOException;
 
 /**
  * 客户端的逻辑实现
- * author PDC
+ * @author PDC
  */
 public class MyIMClient{
     private MyIMClientHandler clientHandler;
