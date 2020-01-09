@@ -10,6 +10,8 @@ MyNioWebServer：服务器类，阻塞等待客户端连接
 
 MyHandler：实现ChannelInboundHandlerAdapter，处理客户端请求，channelRead方法中调用servlet的doGet()
 
+简单地自定义了request、response和servlet
+
 > 搭了个大致架构，可参考myTomcat：https://github.com/cyxpdc/myTomcat自行扩展
 
 ## 二：使用Netty实现im聊天系统

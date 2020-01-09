@@ -6,7 +6,7 @@ import io.netty.handler.codec.http.*;
 
 
 /**
- * author PDC
+ * @author PDC
  */
 public class MyResponse {
 

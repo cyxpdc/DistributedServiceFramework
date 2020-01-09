@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * author PDC
+ * @author PDC
  */
 public class MyRequest {
 
@@ -21,11 +21,11 @@ public class MyRequest {
     }
 
     public String getUri(){
-        return request.getUri();
+        return request.uri();
     }
 
     public String getMethod(){
-        return request.getMethod().name();
+        return request.method().name();
     }
 
     public Map<String, List<String>> getParameters(){
