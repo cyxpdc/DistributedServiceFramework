@@ -8,7 +8,6 @@ import java.util.List;
 
 /**
  * 软负载哈希算法实现
- *
  * @author pdc
  */
 public class HashClusterStrategyImpl implements ClusterStrategy {
@@ -21,7 +20,6 @@ public class HashClusterStrategyImpl implements ClusterStrategy {
         int hashCode = localIP.hashCode();
         //获取服务列表大小
         int size = providerServices.size();
-
         return providerServices.get(hashCode % size);
     }
 }
