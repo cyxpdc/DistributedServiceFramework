@@ -6,6 +6,7 @@ import ares.remoting.framework.serialization.serializer.ISerializer;
 import ares.remoting.framework.serialization.serializer.impl.*;
 import avro.shaded.com.google.common.collect.Maps;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
 
 /**
@@ -39,16 +40,11 @@ public class SerializerEngine {
         if (serializer == null) {
             throw new RuntimeException("serialize error");
         }
-        try {
-            return serializer.serialize(obj);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        return serializer.serialize(obj);
     }
 
 
     public static <T> T deserialize(byte[] data, Class<T> clazz, String serializeType) {
-
         SerializeType serialize = SerializeType.queryByType(serializeType);
         if (serialize == null) {
             throw new RuntimeException("serialize is null");
@@ -57,13 +53,6 @@ public class SerializerEngine {
         if (serializer == null) {
             throw new RuntimeException("serialize error");
         }
-
-        try {
-            return serializer.deserialize(data, clazz);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        return serializer.deserialize(data, clazz);
     }
-
-
 }

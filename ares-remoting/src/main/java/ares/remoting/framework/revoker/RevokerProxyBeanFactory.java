@@ -5,7 +5,6 @@ import ares.remoting.framework.cluster.engine.ClusterEngine;
 import ares.remoting.framework.model.AresRequest;
 import ares.remoting.framework.model.AresResponse;
 import ares.remoting.framework.model.ProviderService;
-import ares.remoting.framework.zookeeper.IRegisterCenter4Invoker;
 import ares.remoting.framework.zookeeper.RegisterCenter;
 
 import java.lang.reflect.InvocationHandler;
@@ -71,7 +70,7 @@ public class RevokerProxyBeanFactory implements InvocationHandler {
         ProviderService newProvider = providerService.copy();
         //设置本次调用服务的方法以及接口
         newProvider.setServiceMethod(method);
-        newProvider.setServiceItf(targetInterface);
+        newProvider.setServiceInterface(targetInterface);
 
         //声明调用AresRequest对象,AresRequest表示发起一次调用所包含的信息
         final AresRequest request = new AresRequest();

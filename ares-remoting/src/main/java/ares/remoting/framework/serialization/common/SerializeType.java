@@ -29,7 +29,6 @@ public enum SerializeType {
         if (StringUtils.isBlank(serializeType)) {
             return null;
         }
-
         for (SerializeType serialize : SerializeType.values()) {
             if (StringUtils.equals(serializeType, serialize.getSerializeType())) {
                 return serialize;

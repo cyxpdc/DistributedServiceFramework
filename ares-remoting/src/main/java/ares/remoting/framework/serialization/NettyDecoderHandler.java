@@ -9,7 +9,7 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 import java.util.List;
 
 /**
- * 解码器
+ * 自定义解码器
  * @author pdc
  */
 public class NettyDecoderHandler extends ByteToMessageDecoder {
@@ -27,10 +27,14 @@ public class NettyDecoderHandler extends ByteToMessageDecoder {
     @Override
     public void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         //获取消息头所标识的消息体字节数组长度
-        if (in.readableBytes() < 4) return;
+        if (in.readableBytes() < 4) {
+            return;
+        }
         in.markReaderIndex();
         int dataLength = in.readInt();
-        if (dataLength < 0) ctx.close();
+        if (dataLength < 0) {
+            ctx.close();
+        }
         //若当前可以获取到的字节数小于实际长度,则直接返回,直到当前可以获取到的字节数等于实际长度
         if (in.readableBytes() < dataLength) {
             in.resetReaderIndex();

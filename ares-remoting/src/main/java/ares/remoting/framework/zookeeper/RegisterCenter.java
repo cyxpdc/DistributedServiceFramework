@@ -6,10 +6,8 @@ import ares.remoting.framework.helper.PropertyConfigeHelper;
 import ares.remoting.framework.model.InvokerService;
 import ares.remoting.framework.model.ProviderService;
 import com.alibaba.fastjson.JSON;
-import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import org.I0Itec.zkclient.IZkChildListener;
 import org.I0Itec.zkclient.ZkClient;
 import org.I0Itec.zkclient.serialize.SerializableSerializer;
 import org.apache.commons.collections.CollectionUtils;
@@ -126,7 +124,7 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
         //连接zk,注册服务
         synchronized (RegisterCenter.class) {
             for (ProviderService provider : serviceMetaData) {
-                String serviceItfKey = provider.getServiceItf().getName();
+                String serviceItfKey = provider.getServiceInterface().getName();
 
                 List<ProviderService> providers = providerServiceMap.get(serviceItfKey);
                 if (providers == null) {
@@ -254,7 +252,7 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
                 }
                 ProviderService providerService = new ProviderService();
                 try {
-                    providerService.setServiceItf(ClassUtils.getClass(serviceName));
+                    providerService.setServiceInterface(ClassUtils.getClass(serviceName));
                 } catch (ClassNotFoundException e) {
                     throw new RuntimeException(e);
                 }

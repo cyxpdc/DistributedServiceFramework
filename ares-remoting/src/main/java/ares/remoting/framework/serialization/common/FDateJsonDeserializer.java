@@ -24,11 +24,9 @@ public class FDateJsonDeserializer extends JsonDeserializer<Date> {
     @Override
     public Date deserialize(JsonParser gen, DeserializationContext ctxt) throws IOException, JsonProcessingException {
         String date = gen.getText();
-
         if (StringUtils.isEmpty(date)) {
             return null;
         }
-
         if (StringUtils.isNumeric(date)) {
             return new Date(Long.valueOf(date));
         }
@@ -36,7 +34,7 @@ public class FDateJsonDeserializer extends JsonDeserializer<Date> {
             DateTime dt = fmt.parseDateTime(date);
             return dt.toDate();
         } catch (Exception e) {
-            throw new IOException(e);
+            throw new RuntimeException(e);
         }
     }
 }

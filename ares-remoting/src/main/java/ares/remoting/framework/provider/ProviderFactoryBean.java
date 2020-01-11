@@ -2,7 +2,6 @@ package ares.remoting.framework.provider;
 
 import ares.remoting.framework.helper.IPHelper;
 import ares.remoting.framework.model.ProviderService;
-import ares.remoting.framework.zookeeper.IRegisterCenter4Provider;
 import ares.remoting.framework.zookeeper.RegisterCenter;
 import com.google.common.collect.Lists;
 import org.springframework.beans.factory.FactoryBean;
@@ -93,7 +92,7 @@ public class ProviderFactoryBean implements FactoryBean, InitializingBean {
         Method[] methods = serviceObject.getClass().getDeclaredMethods();
         for (Method method : methods) {
             ProviderService providerService = new ProviderService();
-            providerService.setServiceItf(serviceItf);
+            providerService.setServiceInterface(serviceItf);
             providerService.setServiceObject(serviceObject);
             providerService.setServerIp(IPHelper.localIp());
             providerService.setServerPort(Integer.parseInt(serverPort));

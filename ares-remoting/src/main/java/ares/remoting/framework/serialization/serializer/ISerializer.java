@@ -1,5 +1,7 @@
 package ares.remoting.framework.serialization.serializer;
 
+import java.lang.reflect.InvocationTargetException;
+
 /**
  * @author pdc
  */

@@ -6,34 +6,38 @@ import org.apache.thrift.TDeserializer;
 import org.apache.thrift.TException;
 import org.apache.thrift.TSerializer;
 import org.apache.thrift.protocol.TBinaryProtocol;
+import org.apache.thrift.protocol.TCompactProtocol;
 
 /**
  * @author pdc
  */
 public class ThriftSerializer implements ISerializer {
 
-
     public <T> byte[] serialize(T obj) {
         try {
-            TSerializer serializer = new TSerializer(new TBinaryProtocol.Factory());
+            if (!(obj instanceof TBase)) {
+                throw new UnsupportedOperationException("not supported obj type");
+            }
+            TSerializer serializer = new TSerializer(new TCompactProtocol.Factory());
             return serializer.serialize((TBase) obj);
         } catch (TException e) {
             throw new RuntimeException(e);
         }
     }
 
-
-    public <T> T deserialize(byte[] data, Class<T> clazz) {
+    public <T> T deserialize(byte[] data, Class<T> cls) {
         try {
-            TBase o = (TBase) clazz.newInstance();
-            TDeserializer tDeserializer = new TDeserializer();
+            if (!TBase.class.isAssignableFrom(cls)) {
+                throw new UnsupportedOperationException("not supported obj type");
+            }
+            //可以指定如下序列化协议
+            //TBinaryProtocol  TJSONProtocol  TCompactProtocol
+            TBase o = (TBase) cls.newInstance();
+            TDeserializer tDeserializer = new TDeserializer(new TCompactProtocol.Factory());
             tDeserializer.deserialize(o, data);
             return (T) o;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-
     }
-
-
 }

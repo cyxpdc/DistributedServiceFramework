@@ -1,6 +1,5 @@
 package ares.remoting.framework.serialization.serializer.impl;
 
-
 import ares.remoting.framework.serialization.serializer.ISerializer;
 import org.apache.avro.io.*;
 import org.apache.avro.specific.SpecificDatumReader;
@@ -8,12 +7,14 @@ import org.apache.avro.specific.SpecificDatumWriter;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 
 /**
+ * 有三种序列化方式，随便选一种,此处为：先自动生成代码,再序列化
+ * 还有：直接使用Schema文件进行序列化与反序列化、以文件的形式序列化
  * @author pdc
  */
 public class AvroSerializer implements ISerializer {
-
 
     @Override
     public <T> byte[] serialize(T obj) {
@@ -23,11 +24,10 @@ public class AvroSerializer implements ISerializer {
             BinaryEncoder binaryEncoder = EncoderFactory.get().directBinaryEncoder(outputStream, null);
             userDatumWriter.write(obj, binaryEncoder);
             return outputStream.toByteArray();
-        } catch (Exception e) {
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
-
 
     @Override
     public <T> T deserialize(byte[] data, Class<T> clazz) {
@@ -38,8 +38,5 @@ public class AvroSerializer implements ISerializer {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-
     }
-
-
 }

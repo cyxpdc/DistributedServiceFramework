@@ -3,10 +3,8 @@ package ares.remoting.framework.provider;
 import ares.remoting.framework.model.AresRequest;
 import ares.remoting.framework.model.AresResponse;
 import ares.remoting.framework.model.ProviderService;
-import ares.remoting.framework.zookeeper.IRegisterCenter4Provider;
 import ares.remoting.framework.zookeeper.RegisterCenter;
 import com.alibaba.fastjson.JSON;
-import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Maps;
 import io.netty.channel.ChannelHandler;
@@ -52,7 +50,7 @@ public class NettyServerInvokeHandler extends SimpleChannelInboundHandler<AresRe
             final long consumeTimeOut = request.getInvokeTimeout();
             final String methodName = request.getInvokedMethodName();
             //根据方法名称定位到具体某一个服务提供者接口名
-            String serviceKey = metaDataModel.getServiceItf().getName();
+            String serviceKey = metaDataModel.getServiceInterface().getName();
             //获取限流工具类，保证线程安全
             Semaphore semaphore = getSemaphore(serviceKey, metaDataModel.getWorkerThreads());
             //从注册中心获取该接口对应的服务提供者列表

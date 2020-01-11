@@ -7,14 +7,13 @@ import java.lang.reflect.Method;
 
 /**
  * 服务注册中心的服务提供者注册信息
- *
  * @author pdc
  */
 public class ProviderService implements Serializable {
     /**
      * 服务接口
      */
-    private Class<?> serviceItf;
+    private Class<?> serviceInterface;
     /**
      * 服务实现
      */
@@ -49,7 +48,7 @@ public class ProviderService implements Serializable {
 
     public ProviderService copy() {
         ProviderService providerService = new ProviderService();
-        providerService.setServiceItf(serviceItf);
+        providerService.setServiceInterface(serviceInterface);
         providerService.setServiceObject(serviceObject);
         providerService.setServiceMethod(serviceMethod);
         providerService.setServerIp(serverIp);
@@ -62,12 +61,12 @@ public class ProviderService implements Serializable {
         return providerService;
     }
 
-    public Class<?> getServiceItf() {
-        return serviceItf;
+    public Class<?> getServiceInterface() {
+        return serviceInterface;
     }
 
-    public void setServiceItf(Class<?> serviceItf) {
-        this.serviceItf = serviceItf;
+    public void setServiceInterface(Class<?> serviceInterface) {
+        this.serviceInterface = serviceInterface;
     }
 
     public Object getServiceObject() {

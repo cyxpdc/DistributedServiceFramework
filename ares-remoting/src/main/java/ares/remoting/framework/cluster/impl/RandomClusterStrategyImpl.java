@@ -8,15 +8,14 @@ import java.util.List;
 
 /**
  * 软负载随机算法实现
- *
  * @author pdc
  */
 public class RandomClusterStrategyImpl implements ClusterStrategy {
+
     @Override
     public ProviderService select(List<ProviderService> providerServices) {
         int MAX_LEN = providerServices.size();
         int index = RandomUtils.nextInt(0, MAX_LEN - 1);
         return providerServices.get(index);
     }
-
 }

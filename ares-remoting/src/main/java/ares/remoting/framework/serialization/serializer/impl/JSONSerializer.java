@@ -13,10 +13,10 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import java.util.Date;
 
 /**
+ * Jackson
  * @author pdc
  */
 public class JSONSerializer implements ISerializer {
-
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -36,16 +36,10 @@ public class JSONSerializer implements ISerializer {
 
     }
 
-    private static ObjectMapper getObjectMapperInstance() {
-        return objectMapper;
-    }
-
-
     public <T> byte[] serialize(T obj) {
         if (obj == null) {
             return new byte[0];
         }
-
         try {
             String json = objectMapper.writeValueAsString(obj);
             return json.getBytes();
@@ -53,7 +47,6 @@ public class JSONSerializer implements ISerializer {
             throw new RuntimeException(e);
         }
     }
-
 
     public <T> T deserialize(byte[] data, Class<T> clazz) {
         String json = new String(data);
@@ -63,5 +56,4 @@ public class JSONSerializer implements ISerializer {
             throw new RuntimeException(e);
         }
     }
-
 }
