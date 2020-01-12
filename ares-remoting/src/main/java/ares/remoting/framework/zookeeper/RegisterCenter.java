@@ -14,9 +14,15 @@ import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.io.*;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 注册中心实现类
@@ -25,6 +31,8 @@ import java.util.Map;
  * @author pdc
  */
 public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4Provider, IRegisterCenter4Governance {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(RegisterCenter.class);
 
     private static final RegisterCenter registerCenter = new RegisterCenter();
 
@@ -36,15 +44,22 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
      */
     private static final Map<String, List<ProviderService>> providerServiceMap = Maps.newConcurrentMap();
 
-    /**
+    /**x
      * 服务端ZK服务元信息,选择服务(第一次直接从ZK拉取,后续由ZK的监听机制主动更新)
      * 为服务调用方本地缓存，从zk拉取后，交给客户端使用
      * 即服务订阅
      */
     private static final Map<String, List<ProviderService>> serviceMetaDataMap4Consume = Maps.newConcurrentMap();
+    private static final TimeUnit MINUTES = TimeUnit.MINUTES;
+
     /**
-     * 主机地址列表
+     * 实现功能：将本地路由表自动保存到本地文件中
+     * 线程池用来将路由表写⼊本地⽂件
      */
+    private volatile boolean changed;
+    private ScheduledExecutorService ses= Executors.newSingleThreadScheduledExecutor();
+    private static final String FILE_PATH = "C:/file";
+
     private static String ZK_SERVICE = PropertyConfigeHelper.getZkService();
 
     private static int ZK_SESSION_TIME_OUT = PropertyConfigeHelper.getZkSessionTimeout();
@@ -137,7 +152,7 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
 
                 List<ProviderService> providers = providerServiceMap.get(serviceItfKey);
                 if (providers == null) {
-                    providers = Lists.newArrayList();
+                    providers = Lists.newCopyOnWriteArrayList();
                 }
                 providers.add(provider);
                 providerServiceMap.put(serviceItfKey, providers);//一个接口对应多个方法不同的提供者
@@ -185,6 +200,7 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
                             input -> StringUtils.split(input, "|")[0]));
                     refreshActivityService(activityServiceIpList);
                 });
+                changed = true;
             }
         }
     }
@@ -208,7 +224,7 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
             //新列表
             List<ProviderService> newProviderServices = newProviderServiceMap.get(interfaceName);
             if (newProviderServices == null) {
-                newProviderServices = Lists.newArrayList();
+                newProviderServices = Lists.newCopyOnWriteArrayList();
             }
             //当前列表和旧列表对比
             for (ProviderService oldProviderService : oldProviderServices) {
@@ -221,6 +237,7 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
         providerServiceMap.clear();
         System.out.println("newProviderServiceMap,"+ JSON.toJSONString(newProviderServiceMap));
         providerServiceMap.putAll(newProviderServiceMap);
+        changed = true;
     }
 
     /**
@@ -259,7 +276,7 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
 
                 List<ProviderService> providerServiceList = providerServiceMap.get(serviceName);
                 if (providerServiceList == null) {
-                    providerServiceList = Lists.newArrayList();
+                    providerServiceList = Lists.newCopyOnWriteArrayList();
                 }
                 ProviderService providerService = new ProviderService();
                 try {
@@ -287,6 +304,7 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
                 refreshServiceMetaDataMap(currentChilds);
             });
         }
+        changed = true;
         return providerServiceMap;
     }
 
@@ -302,7 +320,7 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
 
             List<ProviderService> newProviderServiceList = newServiceMetaDataMap.get(serviceItfKey);
             if (newProviderServiceList == null) {
-                newProviderServiceList = Lists.newArrayList();
+                newProviderServiceList = Lists.newCopyOnWriteArrayList();
             }
             //用来添加新服务
             ProviderService flag = null;
@@ -314,6 +332,7 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
         }
         serviceMetaDataMap4Consume.clear();
         serviceMetaDataMap4Consume.putAll(newServiceMetaDataMap);
+        changed = true;
     }
 
     private ProviderService saveOldService(List<String> curServiceIpList, List<ProviderService> oldServiceList, List<ProviderService> newProviderServiceList, ProviderService flag) {
@@ -431,5 +450,70 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
             return null;
         }
         return pecifiedServices;
+    }
+
+    /**
+     * 启动定时任务
+     * 将变更后的路由表写⼊本地⽂件
+     *
+     * ScheduledExecutorService继承与ExecutorService接口并添加了scheduleAtFixedRate和scheduleWithFixedDelay等方法。
+     * 两个方法的区别是：
+     * 前者是周期性的按照一定的时间进行任务的执行,如果一个任务执行超过了周期时间，则任务执行完之后会马上进行下一次任务的执行。
+     * 而后者在这样的情况出现的时候会在任务执行完之后仍然间隔周期时间进行下一次任务的执行。
+     * 采用scheduleWithFixedDelay()这种调度方式能保证同一时刻只有一个线程执行autoSave()方法，这样就无需加锁
+     */
+    public void startLocalSaver(){
+        ses.scheduleWithFixedDelay(()->{
+            autoSave();
+        }, 1, 1, MINUTES);
+    }
+
+    private void autoSave() {
+        if (!changed) {
+            return;
+        }
+        changed = false;
+        //将路由表写⼊本地⽂件
+        this.save2Local();
+    }
+
+    private void save2Local() {
+        //将providerServiceMap和serviceMetaDataMap4Consume按照自己想要的格式写入到文件即可
+        try {
+            OutputStream os = new BufferedOutputStream(new FileOutputStream(FILE_PATH));
+            saveMap(providerServiceMap,os);
+            saveMap(serviceMetaDataMap4Consume,os);
+        } catch (FileNotFoundException e) {
+            LOGGER.error("打开文件失败：" + e);
+        } catch (IOException e) {
+            LOGGER.error("写入文件失败：" + e);
+        }
+    }
+
+    private void saveMap(Map<String,List<ProviderService>> map,OutputStream os) throws IOException {
+        for(Map.Entry<String, List<ProviderService>> entry : map.entrySet()){
+            os.write((entry.getKey()+ ":").getBytes());
+            List<ProviderService> providerServices = entry.getValue();
+            for(ProviderService providerService : providerServices){
+                os.write((providerService.getServiceItf().getName() + " ").getBytes());
+                os.write((String.valueOf(providerService.getWeight()) + " ").getBytes());
+                os.write((String.valueOf(providerService.getServerPort()) + " ").getBytes());
+                os.write((String.valueOf(providerService.getWorkerThreads()) + " ").getBytes());
+                os.write((providerService.getAppKey() + " ").getBytes());
+                os.write((providerService.getGroupName() + " ").getBytes());
+                os.write((providerService.getServerIp() + " ").getBytes());
+                os.write((providerService.getServiceMethod().getName() + " ").getBytes());
+                os.write((providerService.getServiceObject().toString() + " ").getBytes());
+                os.write((String.valueOf(Integer.parseInt(String.valueOf(Long.valueOf(providerService.getTimeout())))) + "|").getBytes());
+            }
+            os.write("/r/n".getBytes());
+        }
+    }
+
+    /**
+     * 如果zk崩了，可以从本地文件读取到两个map中，算是一种降级
+     */
+    private void readLocal2Map(){
+
     }
 }
