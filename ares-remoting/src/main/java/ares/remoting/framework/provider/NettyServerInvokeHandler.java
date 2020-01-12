@@ -24,18 +24,19 @@ import java.util.concurrent.TimeUnit;
 /**
  * 处理服务端的逻辑
  * 根据客户端传过来的服务调用对象，返回调用方法后的结果
- *
  * @author pdc
  */
 @ChannelHandler.Sharable
 public class NettyServerInvokeHandler extends SimpleChannelInboundHandler<AresRequest> {
 
-    private static final Logger logger = LoggerFactory.getLogger(NettyServerInvokeHandler.class);
+    private static final ThreadLocal<String> TRANSFER_ID = new ThreadLocal<>();
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(NettyServerInvokeHandler.class);
 
     /**
      * 服务端限流，一个接口对应一个限流工具
      */
-    private static final Map<String, Semaphore> serviceKeySemaphoreMap = Maps.newConcurrentMap();
+    private static final Map<String, Semaphore> SERVICE_KEY_SEMAPHORE_MAP = Maps.newConcurrentMap();
 
     /**
      * 接收客户端发来的数据，调用方法，然后将方法返回的结果写回客户端
@@ -45,6 +46,7 @@ public class NettyServerInvokeHandler extends SimpleChannelInboundHandler<AresRe
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, AresRequest request){
         if (ctx.channel().isWritable()) {
+            TRANSFER_ID.set(request.getUniqueKey());
             //从服务调用对象里获取通过软负载算法后得到的服务提供者信息
             ProviderService metaDataModel = request.getProviderService();
             final long consumeTimeOut = request.getInvokeTimeout();
@@ -89,18 +91,18 @@ public class NettyServerInvokeHandler extends SimpleChannelInboundHandler<AresRe
             //将服务调用返回对象回写到消费端
             ctx.writeAndFlush(response);
         } else {
-            logger.error("------------channel closed!---------------");
+            LOGGER.error("------------channel closed!---------------");
         }
     }
 
     private Semaphore getSemaphore(String serviceKey, int workerThread) {
-        Semaphore semaphore = serviceKeySemaphoreMap.get(serviceKey);
+        Semaphore semaphore = SERVICE_KEY_SEMAPHORE_MAP.get(serviceKey);
         if (semaphore == null) {
-            synchronized (serviceKeySemaphoreMap) {
-                semaphore = serviceKeySemaphoreMap.get(serviceKey);
+            synchronized (SERVICE_KEY_SEMAPHORE_MAP) {
+                semaphore = SERVICE_KEY_SEMAPHORE_MAP.get(serviceKey);
                 if (semaphore == null) {
                     semaphore = new Semaphore(workerThread);
-                    serviceKeySemaphoreMap.put(serviceKey, semaphore);
+                    SERVICE_KEY_SEMAPHORE_MAP.put(serviceKey, semaphore);
                 }
             }
         }

@@ -335,6 +335,12 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
         }
     }
 
+    /**
+     * 获取指定接口的服务提供者和消费者
+     * @param serviceName 服务名
+     * @param appKey 应用
+     * @return 提供者和消费者
+     */
     @Override
     public Pair<List<ProviderService>, List<InvokerService>> queryProvidersAndInvokers(String serviceName, String appKey) {
         //服务消费者列表
@@ -365,47 +371,18 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
                 continue;
             }
             for (String service : serviceList) {
-                //获取ROOT_PATH + APP_KEY + group +service 注册中心子目录列表
-                String servicePath = groupPath + "/" + service;
-                List<String> serviceTypes = zkClient.getChildren(servicePath);
-                if (CollectionUtils.isEmpty(serviceTypes)) {
-                    continue;
-                }
-                for (String serviceType : serviceTypes) {
-                    if (StringUtils.equals(serviceType, PROVIDER_TYPE)) {
-                        //获取ROOT_PATH + APP_KEY + group +service+serviceType 注册中心子目录列表
-                        String providerPath = servicePath + "/" + serviceType;
-                        List<String> providers = zkClient.getChildren(providerPath);
-                        if (CollectionUtils.isEmpty(providers)) {
-                            continue;
-                        }
-                        //获取服务提供者信息
-                        for (String provider : providers) {
-                            String[] providerNodeArr = StringUtils.split(provider, "|");
-                            ProviderService providerService = new ProviderService();
-                            providerService.setAppKey(appKey);
-                            providerService.setGroupName(group);
-                            providerService.setServerIp(providerNodeArr[0]);
-                            providerService.setServerPort(Integer.parseInt(providerNodeArr[1]));
-                            providerService.setWeight(Integer.parseInt(providerNodeArr[2]));
-                            providerService.setWorkerThreads(Integer.parseInt(providerNodeArr[3]));
-                            providerServices.add(providerService);
-                        }
-
-                    } else if (StringUtils.equals(serviceType, INVOKER_TYPE)) {
-                        //获取ROOT_PATH + APP_KEY + group +service+serviceType 注册中心子目录列表
-                        String invokerPath = servicePath + "/" + serviceType;
-                        List<String> invokers = zkClient.getChildren(invokerPath);
-                        if (CollectionUtils.isEmpty(invokers)) {
-                            continue;
-                        }
-                        //获取服务消费者信息
-                        for (String invoker : invokers) {
-                            InvokerService invokerService = new InvokerService();
-                            invokerService.setRemoteAppKey(appKey);
-                            invokerService.setGroupName(group);
-                            invokerService.setInvokerIp(invoker);
-                            invokerServices.add(invokerService);
+                if(service.equals(serviceName)){
+                    //获取ROOT_PATH + APP_KEY + group + service 注册中心子目录列表
+                    String servicePath = groupPath + "/" + service;
+                    List<String> serviceTypes = zkClient.getChildren(servicePath);
+                    if (CollectionUtils.isEmpty(serviceTypes)) {
+                        continue;
+                    }
+                    for (String serviceType : serviceTypes) {
+                        if (StringUtils.equals(serviceType, PROVIDER_TYPE)) {
+                            addPrioverServices(appKey, providerServices, group, servicePath, serviceType);
+                        } else if (StringUtils.equals(serviceType, INVOKER_TYPE)) {
+                            addInvokerServices(appKey, invokerServices, group, servicePath, serviceType);
                         }
                     }
                 }
@@ -413,5 +390,46 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
 
         }
         return Pair.of(providerServices, invokerServices);
+    }
+
+    private void addInvokerServices(String appKey, List<InvokerService> invokerServices, String group, String servicePath, String serviceType) {
+        //获取ROOT_PATH + APP_KEY + group + service + serviceType 注册中心子目录列表
+        List<String> invokers = getPath(servicePath, serviceType);
+        if (invokers == null) return;
+        //获取服务消费者信息
+        for (String invoker : invokers) {
+            InvokerService invokerService = new InvokerService();
+            invokerService.setRemoteAppKey(appKey);
+            invokerService.setGroupName(group);
+            invokerService.setInvokerIp(invoker);
+            invokerServices.add(invokerService);
+        }
+    }
+
+    private void addPrioverServices(String appKey, List<ProviderService> providerServices, String group, String servicePath, String serviceType) {
+        //获取ROOT_PATH + APP_KEY + group + service + serviceType 注册中心子目录列表
+        List<String> providers = getPath(servicePath, serviceType);
+        if (providers == null) return;
+        //获取服务提供者信息
+        for (String provider : providers) {
+            String[] providerNodeArr = StringUtils.split(provider, "|");
+            ProviderService providerService = new ProviderService();
+            providerService.setAppKey(appKey);
+            providerService.setGroupName(group);
+            providerService.setServerIp(providerNodeArr[0]);
+            providerService.setServerPort(Integer.parseInt(providerNodeArr[1]));
+            providerService.setWeight(Integer.parseInt(providerNodeArr[2]));
+            providerService.setWorkerThreads(Integer.parseInt(providerNodeArr[3]));
+            providerServices.add(providerService);
+        }
+    }
+
+    private List<String> getPath(String servicePath, String serviceType) {
+        String pecifiedPath = servicePath + "/" + serviceType;
+        List<String> pecifiedServices = zkClient.getChildren(pecifiedPath);
+        if (CollectionUtils.isEmpty(pecifiedServices)) {
+            return null;
+        }
+        return pecifiedServices;
     }
 }
