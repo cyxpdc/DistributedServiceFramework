@@ -18,6 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -482,6 +483,8 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
         try {
             OutputStream os = new BufferedOutputStream(new FileOutputStream(FILE_PATH));
             saveMap(providerServiceMap,os);
+            os.write("start serviceMetaDataMap4Consume".getBytes());
+            os.write("/r/n".getBytes());
             saveMap(serviceMetaDataMap4Consume,os);
         } catch (FileNotFoundException e) {
             LOGGER.error("打开文件失败：" + e);
@@ -490,11 +493,17 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
         }
     }
 
+    /**
+     * 格式为：127.0.0.1:xxx xxx xxx
+     * @param map
+     * @param os
+     * @throws IOException
+     */
     private void saveMap(Map<String,List<ProviderService>> map,OutputStream os) throws IOException {
         for(Map.Entry<String, List<ProviderService>> entry : map.entrySet()){
-            os.write((entry.getKey()+ ":").getBytes());
             List<ProviderService> providerServices = entry.getValue();
             for(ProviderService providerService : providerServices){
+                os.write((entry.getKey()+ ":").getBytes());
                 os.write((providerService.getServiceItf().getName() + " ").getBytes());
                 os.write((String.valueOf(providerService.getWeight()) + " ").getBytes());
                 os.write((String.valueOf(providerService.getServerPort()) + " ").getBytes());
@@ -502,9 +511,10 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
                 os.write((providerService.getAppKey() + " ").getBytes());
                 os.write((providerService.getGroupName() + " ").getBytes());
                 os.write((providerService.getServerIp() + " ").getBytes());
+                os.write((providerService.getServiceObject().getClass().getName() + " ").getBytes());
                 os.write((providerService.getServiceMethod().getName() + " ").getBytes());
-                os.write((providerService.getServiceObject().toString() + " ").getBytes());
-                os.write((String.valueOf(Integer.parseInt(String.valueOf(Long.valueOf(providerService.getTimeout())))) + "|").getBytes());
+                os.write((String.valueOf(providerService.getTimeout())).getBytes());
+                os.write("/r/n".getBytes());
             }
             os.write("/r/n".getBytes());
         }
@@ -514,6 +524,61 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
      * 如果zk崩了，可以从本地文件读取到两个map中，算是一种降级
      */
     private void readLocal2Map(){
+        try {
+            BufferedReader bf = new BufferedReader(new FileReader(FILE_PATH));
+            String str = null;
+            List<ProviderService> providerServices = null;
+            List<ProviderService> serviceMetaData = null;
+            String key = null;
+            while ((str = bf.readLine()) != null) {
+                if(str == "start serviceMetaDataMap4Consume"){
+                    break;
+                }
+                key = str = str.substring(0,str.indexOf(":"));
+                providerServices = providerServiceMap.get(key);
+                if(providerServices == null){
+                    providerServices = Lists.newCopyOnWriteArrayList();
+                }
+                setProvider(providerServices,str);
+            }
+            providerServiceMap.put(key,providerServices);
+            while((str = bf.readLine()) != null){
+                key = str = str.substring(0,str.indexOf(":"));
+                providerServices = serviceMetaDataMap4Consume.get(key);
+                if(providerServices == null){
+                    providerServices = Lists.newCopyOnWriteArrayList();
+                }
+                setProvider(serviceMetaData,str);
+            }
+            serviceMetaDataMap4Consume.put(key,serviceMetaData);
+        } catch (FileNotFoundException e) {
+            LOGGER.error("打开文件失败：" + e);
+        } catch (IOException e) {
+            LOGGER.error("读取文件失败：" + e);
+        } catch (ClassNotFoundException e) {
+            LOGGER.error("Class.forName出错：" + e);
+        } catch (NoSuchMethodException e) {
+            LOGGER.error("找不到此方法：" + e);
+        } catch (IllegalAccessException | InstantiationException e) {
+            LOGGER.error("newInstance 出错：" + e);
+        }
+    }
 
+    private void setProvider(List<ProviderService> providerServices,String str) throws ClassNotFoundException, IllegalAccessException, InstantiationException, NoSuchMethodException {
+        String[] arr = str.split(" ");
+        if(arr.length == 10){
+            ProviderService service = new ProviderService();
+            service.setServiceItf(Class.forName(arr[0]));
+            service.setWeight(Integer.parseInt(arr[1]));
+            service.setServerPort(Integer.parseInt(arr[2]));
+            service.setWorkerThreads(Integer.parseInt(arr[3]));
+            service.setAppKey(arr[4]);
+            service.setGroupName(arr[5]);
+            service.setServerIp(arr[6]);
+            service.setServiceObject(Class.forName(arr[7]).newInstance());
+            service.setServiceMethod(service.getServiceObject().getClass().getMethod(arr[8]));
+            service.setTimeout(Long.parseLong(arr[9]));
+            providerServices.add(service);
+        }
     }
 }
