@@ -1,4 +1,4 @@
-package ares.remoting.framework.cluster.impl;
+package ares.remoting.framework.cluster.engine;
 
 import org.apache.commons.lang.StringUtils;
 
@@ -17,30 +17,26 @@ public enum ClusterStrategyEnum {
     //源地址hash算法
     Hash("Hash");
 
-    private ClusterStrategyEnum(String code) {
-        this.code = code;
+    private String clusterStrategy;
+
+    private ClusterStrategyEnum(String clusterStrategy) {
+        this.clusterStrategy = clusterStrategy;
     }
 
 
-    public static ClusterStrategyEnum queryByCode(String code) {
-        if (StringUtils.isBlank(code)) {
+    public static ClusterStrategyEnum queryByCode(String clusterStrategy) {
+        if (StringUtils.isBlank(clusterStrategy)) {
             return null;
         }
         for (ClusterStrategyEnum strategy : values()) {
-            if (StringUtils.equals(code, strategy.getCode())) {
+            if (StringUtils.equals(clusterStrategy, strategy.getClusterStrategy())) {
                 return strategy;
             }
         }
         return null;
     }
 
-    private String code;
-
-    public String getCode() {
-        return code;
-    }
-
-    public void setCode(String code) {
-        this.code = code;
+    public String getClusterStrategy() {
+        return clusterStrategy;
     }
 }

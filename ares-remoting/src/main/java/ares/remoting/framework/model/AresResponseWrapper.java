@@ -5,7 +5,6 @@ import java.util.concurrent.BlockingQueue;
 
 /**
  * Netty异步调用返回结果包装类
- *
  * @author pdc
  */
 public class AresResponseWrapper {

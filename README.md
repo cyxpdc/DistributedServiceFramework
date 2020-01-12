@@ -133,7 +133,7 @@ IMServerProcessor：使用ChannelGroup代表当前用户数，封装了真正的
 
 主要组成：服务消费端、服务提供端、服务数据网络传输的序列化与反序列化、服务数据的通信机制、服务注册中心、服务治理
 
-服务的引入与发布，即服务消费端与提供段：使用Spring来实现
+服务的引入与发布，即服务消费端与提供端：使用Spring来实现
 
 服务数据网络传输的序列化与反序列化：Java默认序列化、XML、JSON、Hessian、protostuff、Thrift、Avro等
 
@@ -168,7 +168,6 @@ NettyServer：Netty服务端，将服务对外发布出去，使其能够接受�
 服务引入：
 
 RevokerFactoryBean：组合了远程服务引入相关的的属性，引入远程服务，将服务提供者拉到本地缓存、注册服务消费者信息(服务治理用的)
-![1561949523390](F:/markdownPicture/assets/1561949523390.png)
 
 - 使用示例
 
@@ -177,13 +176,10 @@ RevokerFactoryBean：组合了远程服务引入相关的的属性，引入远�
 1.自定义接口HelloService和实现类HelloServiceImpl
 
 2.xml配置：将HelloService作为远程服务发布出去
-![1561951483539](F:/markdownPicture/assets/1561951483539.png)
-![1562029746423](F:/markdownPicture/assets/1562029746423.png)
 
 服务引入：
 
 1.xml配置：引入HelloService。这里配置好了接口后，在RevokerFactoryBean中得到匹配此接口的服务提供者列表，再根据软负载均衡策略选取一个服务提供者代理对象，发起调用
-![1561951673185](F:/markdownPicture/assets/1561951673185.png)
 
 最后由MainClient和MainServer进行测试
 
@@ -248,12 +244,18 @@ IRegisterCenter4Invoker：消费端注册中心接口
 
 RegisterCenter：
 注册中心，实现了IRegisterCenter4Provider和IRegisterCenter4Invoker接口；
-ZkClient需要使用volatile；registerProvider方法需要加锁；
+ZkClient需要使用volatile（单例）；registerProvider方法需要加锁；
 服务提供者信息的路径为：ZK命名空间/当前部署应用APP命名空间/ groupName/serviceNode(服务接口名)/PROVIDER_TYPE，为永久节点
 服务器节点：服务提供者信息的路径 + "/" + localIp + "|" + serverPort + "|" + weight + "|" + workerThreads + "|" + groupName;，即为最后的子节点，设置为临时节点，用来自动上下线
+（/config_register/app1/default/HelloService/PROVIDER_TYPE/**127.0.0.1/1111/2/10/default**，
+   /config_register/app1/default/PdcService/PROVIDER_TYPE/**127.0.0.1/1111/2/10/default**
+，一个接口有两个方法，那么也就是一个接口有两个服务提供者）
 
-此处只实现了下线的更新，算法为：
-创建一个新列表，当前列表和旧列表对比，如果当前列表包含有旧列表的ip，则加入新列表，并移除当前列表的当前ip；然后将剩下的ip封装为ProviderService即可；最后返回新列表的map
+消费端节点：（/config_register/app1/default/HelloService/INVOKER_TYPE/**127.0.0.1**）
+
+监听的是每个接口下ip的变化
+
+synchronized防止重复注册
 
 ## 5.分布式服务框架底层通信实现
 
@@ -285,6 +287,8 @@ NettyEncoderHandler：编码器，负责将Java对象序列化为字节数组
 
 NettyChannelPoolFactory：Channel连接池工厂类，为每一个服务提供者地址预先生成一个保存Channel的阻塞队列ArrayBlockingQueue(亮点)
 
+创建channel时，使用了CountDownLatch来确保Channel建立的过程结束再返回Channel
+
 > 3.客户端发起服务调用后需要同步等待调用结果，但是Netty是异步框架，所以需要自己实现同步等待机制(为了保证顺序)
 
 为每次请求新建一个阻塞队列，返回结果的时候，存入该阻塞队列，若在超时时间内返回结果值，则调用端将该返回结果从阻塞队列中取出返回给调用方，否则超时返回null(亮点)
@@ -301,17 +305,27 @@ RevokerResponseHolder：保存及操作返回结果的数据容器类
 
 NettyClientInvokerHandler：将Netty异步返回的结果存入阻塞队列,以便调用端同步获取
 
-RevokerServiceCallable：Netty客户端发起服务调用类
+RevokerProxyBeanFactory：远程服务在服务消费端的动态代理实现，使用JDK动态代理，同样是单例，内部的fixedThreadPool也是单例，且fixedThreadPool不需要volatile，因为指令重排序不会影响线程安全
 
-通过Netty客户端发起一次调用，并得到调用返回结果的流程：
+- 核心流程解析
 
-> 1.从服务注册中心获取服务提供者列表，通过服务端配置的软负载算法参数选择某一个服务提供者
->
-> 2.根据服务提供者信息从Netty连接池中获取对应的Channel连接：RevokerServiceCallable#call
->
-> 3.将服务请求数据对象通过某种序列化协议编码成字节数组，通过通道Channel发送到服务端：NettyChannelPoolFactory#registerChannel
->
-> 4.同步等待服务端返回调用结果，最终完成一次服务调用：RevokerServiceCallable#call
+1 一开始Spring会将RevokerFactory注入到容器中，其afterPropertiesSet方法会初始化服务提供者列表和NettyChannelPoolFactory（创建Channel，即Netty客户端，使用CountDownLatch来等待Channel创建），还会将其serviceObject属性由RevokerProxyBeanFactory#getProxy赋值，即RevokerProxyBeanFactory作为代理，那么客户端调用方法时将会调用invoke方法（JDK动态代理）
+
+2 invoke方法根据接口和负载均衡策略选择服务提供者，创建AresRequest对象，通过单例线程池fixedThreadPool发起请求，即调用RevokerServiceCallable#call
+
+3 RevokerServiceCallable#call方法首先根据AresRequest的唯一标识创建AresResponseWrapper，然后从NettyChannelPoolFactory中根据服务提供者ip获取对应的Channel连接，将AresRequest写入到Channel中
+
+4 将AresRequest写入到Channel中（ctx.writeAndFlush(request)），服务端进行响应时会触发NettyClientInvokeHandler#channelRead0，内部调用RevokerResponseHolder.putResultValue(response)，将结果写入responseMap<String, AresResponseWrapper>；然后RevokerServiceCallable#call最终返回结果时，调用RevokerResponseHolder.getValue，从responseMap<String, AresResponseWrapper>中获取结果
+
+5 RevokerServiceCallable#call处理完毕后，最终返回到RevokerProxyBeanFactory#invoke中，通过Future的get方法获取返回结果，完成调用
+
+6 AresResponseWrapper封装了AresResponse，添加了ArrayBlockingQueue达到同步返回结果的目的
+
+7 服务提供者也是一开始Spring会将ProviderFactory注入到容器中，然后其afterPropertiesSet方法会启动Netty服务端，并以服务方法为粒度将服务注册到zk，保存好服务端的服务提供者列表providerServiceMap和客户端的本地缓存服务提供者列表serviceMetaDataMap4Consume（两者差别见注释）
+
+8 第4步中将AresRequest写入到Channel中后，服务端获取到客户端消息，调用NettyServerInvokeHandler#channelRead0，内部会根据AresRequest获取服务提供者信息，从providerServiceMap中获取指定接口和指定方法名的服务提供者之一，使用反射和semaphore进行调用（服务提供者providerService的实现类serviceObject由xml配置的ref属性注入）
+
+注释：服务端的map，即providerServiceMap，是一个接口对应多个提供者，每个提供者以方法为粒度，但是注册到zk还是以ip为路径，因此客户端的map，即本地缓存serviceMetaDataMap4Consume，是一个接口对应一个提供者，因为是以路径的ip进行切割作为粒度（这里假设一个服务只在一台机器上，如果多台，依次类推），在RevokerProxyBeanFactory#invoke中获取ProviderService时，重新设置一下方法就好
 
 ## 6.分布式服务框架软负载实现
 

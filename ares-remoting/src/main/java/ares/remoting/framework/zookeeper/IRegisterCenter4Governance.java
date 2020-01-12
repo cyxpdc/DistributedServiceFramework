@@ -8,7 +8,6 @@ import java.util.List;
 
 /**
  * 服务治理接口
- *
  * @author pdc
  */
 public interface IRegisterCenter4Governance {

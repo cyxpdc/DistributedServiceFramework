@@ -17,12 +17,13 @@ public class ProviderFactoryBeanDefinitionParser extends AbstractSingleBeanDefin
 
     private static final Logger logger = LoggerFactory.getLogger(ProviderFactoryBeanDefinitionParser.class);
 
+    @Override
     protected Class getBeanClass(Element element) {
         return ProviderFactoryBean.class;
     }
 
+    @Override
     protected void doParse(Element element, BeanDefinitionBuilder bean) {
-
         try {
             String serviceItf = element.getAttribute("interface");
             String timeOut = element.getAttribute("timeout");
@@ -48,12 +49,9 @@ public class ProviderFactoryBeanDefinitionParser extends AbstractSingleBeanDefin
             if (StringUtils.isNotBlank(groupName)) {
                 bean.addPropertyValue("groupName", groupName);
             }
-        } catch (Exception e) {
-            logger.error("ProviderFactoryBeanDefinitionParser error.", e);
+        } catch (ClassNotFoundException e) {
+            logger.error("ProviderFactoryBeanDefinitionParser Class.forName error.", e);
             throw new RuntimeException(e);
         }
-
     }
-
-
 }

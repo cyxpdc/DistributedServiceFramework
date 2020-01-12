@@ -14,6 +14,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
@@ -32,13 +33,12 @@ public class NettyServerInvokeHandler extends SimpleChannelInboundHandler<AresRe
     private static final Logger logger = LoggerFactory.getLogger(NettyServerInvokeHandler.class);
 
     /**
-     * 服务端限流
-     * K为服务接口，V为Semaphore
+     * 服务端限流，一个接口对应一个限流工具
      */
     private static final Map<String, Semaphore> serviceKeySemaphoreMap = Maps.newConcurrentMap();
 
     /**
-     * 接收客户端发来的数据，写回客户端
+     * 接收客户端发来的数据，调用方法，然后将方法返回的结果写回客户端
      * @param ctx
      * @param request
      */
@@ -50,8 +50,8 @@ public class NettyServerInvokeHandler extends SimpleChannelInboundHandler<AresRe
             final long consumeTimeOut = request.getInvokeTimeout();
             final String methodName = request.getInvokedMethodName();
             //根据方法名称定位到具体某一个服务提供者接口名
-            String serviceKey = metaDataModel.getServiceInterface().getName();
-            //获取限流工具类，保证线程安全
+            String serviceKey = metaDataModel.getServiceItf().getName();
+            //获取限流工具类，需要保证线程安全
             Semaphore semaphore = getSemaphore(serviceKey, metaDataModel.getWorkerThreads());
             //从注册中心获取该接口对应的服务提供者列表
             List<ProviderService> localProviderCaches = RegisterCenter.singleton()
@@ -66,16 +66,15 @@ public class NettyServerInvokeHandler extends SimpleChannelInboundHandler<AresRe
                                 input ->
                                 StringUtils.equals(input.getServiceMethod().getName(), methodName))
                                 .iterator().next();
-                //利用反射发起服务调用
+                //利用反射发起服务调用，利用semaphore实现限流
                 Object serviceObject = localProviderCache.getServiceObject();
                 Method method = localProviderCache.getServiceMethod();
-                //利用semaphore实现限流
                 acquire = semaphore.tryAcquire(consumeTimeOut, TimeUnit.MILLISECONDS);
                 if (acquire) {
                     result = method.invoke(serviceObject, request.getArgs());
                 }
-            } catch (Exception e) {
-                System.out.println(JSON.toJSONString(localProviderCaches) + "  " + methodName+" "+e.getMessage());
+            } catch (IllegalAccessException |  InterruptedException | InvocationTargetException e) {
+                System.out.println(JSON.toJSONString(localProviderCaches) + "  " + methodName+" " + e.getMessage());
                 result = e;
             } finally {
                 if (acquire) {

@@ -56,7 +56,8 @@ public class NettyChannelPoolFactory {
     }
 
     /**
-     * 使用serviceMetaDataMap4Consume初始化Netty channel 连接队列Map
+     * 使用serviceMetaDataMap4Consume初始化Netty channel 连接队列channelPoolMap
+     * 逻辑：取出serviceMetaDataMap4Consume所有提供者，然后创建InetSocketAddress和队列，封装即可
      *
      * @param providerMap
      */
@@ -67,7 +68,7 @@ public class NettyChannelPoolFactory {
             if (CollectionUtils.isEmpty(serviceMetaDataModels)) continue;
             serviceMetaDataList.addAll(serviceMetaDataModels);
         }
-        //获取服务提供者地址列表
+        //获取服务提供者地址列表，通过查看hashmap的putval和InetSocketAddress的equals，可知ip和port相同就相同
         Set<InetSocketAddress> socketAddressSet = Sets.newHashSet();
         for (ProviderService serviceMetaData : serviceMetaDataList) {
             String serviceIp = serviceMetaData.getServerIp();
@@ -78,31 +79,28 @@ public class NettyChannelPoolFactory {
         //根据服务提供者地址列表初始化Channel阻塞队列
         //并以地址为Key,地址对应的Channel阻塞队列为value,存入channelPoolMap
         for (InetSocketAddress socketAddress : socketAddressSet) {
-            try {
-                int realChannelConnectSize = 0;
-                while (realChannelConnectSize < channelConnectSize) {
-                    Channel channel = null;
-                    while (channel == null) {
-                        //若channel不存在,则注册新的Netty Channel
-                        //新的Channel会与服务端进行通信
-                        channel = registerChannel(socketAddress);
-                    }
-                    //计数器,初始化的时候存入阻塞队列的Netty Channel个数不超过channelConnectSize
-                    realChannelConnectSize++;
-                    //将新注册的Netty Channel存入阻塞队列channelArrayBlockingQueue
-                    // 并将阻塞队列channelArrayBlockingQueue作为value存入channelPoolMap
-                    ArrayBlockingQueue<Channel> channelArrayBlockingQueue = channelPoolMap.get(socketAddress);
-                    if (channelArrayBlockingQueue == null) {
-                        channelArrayBlockingQueue = new ArrayBlockingQueue<Channel>(channelConnectSize);
-                        channelPoolMap.put(socketAddress, channelArrayBlockingQueue);
-                    }
-                    channelArrayBlockingQueue.offer(channel);
+            int realChannelConnectSize = 0;
+            while (realChannelConnectSize < channelConnectSize) {
+                Channel channel = null;
+                while (channel == null) {
+                    //若channel不存在,则注册新的Netty Channel
+                    //新的Channel会与服务端进行通信
+                    channel = registerChannel(socketAddress);
                 }
-            } catch (Exception e) {
-                throw new RuntimeException(e);
+                //计数器,初始化的时候存入阻塞队列的Netty Channel个数不超过channelConnectSize
+                realChannelConnectSize++;
+                //将新注册的Netty Channel存入阻塞队列channelArrayBlockingQueue
+                // 并将阻塞队列channelArrayBlockingQueue作为value存入channelPoolMap
+                ArrayBlockingQueue<Channel> channelArrayBlockingQueue = channelPoolMap.get(socketAddress);
+                if (channelArrayBlockingQueue == null) {
+                    channelArrayBlockingQueue = new ArrayBlockingQueue<>(channelConnectSize);
+                    channelPoolMap.put(socketAddress, channelArrayBlockingQueue);
+                }
+                channelArrayBlockingQueue.offer(channel);
             }
         }
     }
+
 
     /**
      * 根据服务提供者地址获取对应的Netty Channel阻塞队列
@@ -131,7 +129,7 @@ public class NettyChannelPoolFactory {
             }
             Channel newChannel = null;
             while (newChannel == null) {
-                logger.debug("---------register new Channel-------------");
+                logger.debug("---------register new Channel again-------------");
                 newChannel = registerChannel(inetSocketAddress);
             }
             arrayBlockingQueue.offer(newChannel);
@@ -191,7 +189,8 @@ public class NettyChannelPoolFactory {
             if (isSuccessHolder.get(0)) {
                 return newChannel;
             }
-        } catch (Exception e) {
+        } catch (InterruptedException e) {
+            logger.error("Client sync() failure" + e);
             throw new RuntimeException(e);
         }
         return null;

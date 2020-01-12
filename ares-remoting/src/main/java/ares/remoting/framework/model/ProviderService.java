@@ -13,7 +13,7 @@ public class ProviderService implements Serializable {
     /**
      * 服务接口
      */
-    private Class<?> serviceInterface;
+    private Class<?> serviceItf;
     /**
      * 服务实现
      */
@@ -48,7 +48,7 @@ public class ProviderService implements Serializable {
 
     public ProviderService copy() {
         ProviderService providerService = new ProviderService();
-        providerService.setServiceInterface(serviceInterface);
+        providerService.setServiceItf(serviceItf);
         providerService.setServiceObject(serviceObject);
         providerService.setServiceMethod(serviceMethod);
         providerService.setServerIp(serverIp);
@@ -61,12 +61,12 @@ public class ProviderService implements Serializable {
         return providerService;
     }
 
-    public Class<?> getServiceInterface() {
-        return serviceInterface;
+    public Class<?> getServiceItf() {
+        return serviceItf;
     }
 
-    public void setServiceInterface(Class<?> serviceInterface) {
-        this.serviceInterface = serviceInterface;
+    public void setServiceItf(Class<?> serviceItf) {
+        this.serviceItf = serviceItf;
     }
 
     public Object getServiceObject() {

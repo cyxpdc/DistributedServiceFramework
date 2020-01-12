@@ -4,6 +4,7 @@ import ares.remoting.framework.serialization.common.SerializeType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 
@@ -19,15 +20,15 @@ public class PropertyConfigeHelper {
     private static final Properties properties = new Properties();
 
     //ZK服务地址
-    private static String zkService = "";
+    private static final String zkService;
     //ZK session超时时间
-    private static int zkSessionTimeout;
+    private static final int zkSessionTimeout;
     //ZK connection超时时间
-    private static int zkConnectionTimeout;
+    private static final int zkConnectionTimeout;
     //序列化算法类型
-    private static SerializeType serializeType;
+    private static final SerializeType serializeType;
     //每个服务端提供者的Netty的连接数
-    private static int channelConnectSize;
+    private static final int channelConnectSize;
 
 
     /**
@@ -46,26 +47,20 @@ public class PropertyConfigeHelper {
             zkSessionTimeout = Integer.parseInt(properties.getProperty("zk_sessionTimeout", "500"));
             zkConnectionTimeout = Integer.parseInt(properties.getProperty("zk_connectionTimeout", "500"));
             channelConnectSize = Integer.parseInt(properties.getProperty("channel_connect_size", "10"));
-            String seriType = properties.getProperty("serialize_type");
-            serializeType = SerializeType.queryByType(seriType);
-            if (serializeType == null) {
-                throw new RuntimeException("serializeType is null");
-            }
-
-        } catch (Throwable t) {
-            logger.warn("load ares_remoting's properties file failed.", t);
-            throw new RuntimeException(t);
+            serializeType = SerializeType.queryByType(properties.getProperty("serialize_type","ProtoStuffSerializer"));
+        } catch (IOException e) {
+            logger.warn("load ares_remoting's properties file failed.", e);
+            throw new RuntimeException(e);
         } finally {
             if (null != is) {
                 try {
                     is.close();
-                } catch (Exception e) {
-                    e.printStackTrace();
+                } catch (IOException e) {
+                    logger.error("close InputStream failure" + e);
                 }
             }
         }
     }
-
 
     public static String getZkService() {
         return zkService;

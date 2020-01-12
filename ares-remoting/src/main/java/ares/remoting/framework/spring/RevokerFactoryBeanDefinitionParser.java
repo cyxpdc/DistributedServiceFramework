@@ -16,12 +16,13 @@ public class RevokerFactoryBeanDefinitionParser extends AbstractSingleBeanDefini
 
     private static final Logger logger = LoggerFactory.getLogger(RevokerFactoryBeanDefinitionParser.class);
 
+    @Override
     protected Class getBeanClass(Element element) {
         return RevokerFactoryBean.class;
     }
 
+    @Override
     protected void doParse(Element element, BeanDefinitionBuilder bean) {
-
         try {
             String timeOut = element.getAttribute("timeout");
             String targetInterface = element.getAttribute("interface");
@@ -39,10 +40,9 @@ public class RevokerFactoryBeanDefinitionParser extends AbstractSingleBeanDefini
             if (StringUtils.isNotBlank(groupName)) {
                 bean.addPropertyValue("groupName", groupName);
             }
-        } catch (Exception e) {
+        } catch (ClassNotFoundException e) {
             logger.error("RevokerFactoryBeanDefinitionParser error.", e);
             throw new RuntimeException(e);
         }
-
     }
 }

@@ -18,15 +18,38 @@ public class IPHelper {
 
     private static String hostIp;
 
-
     /**
      * 获取本机Ip
      * <p/>
      * 通过 获取系统所有的networkInterface网络接口 然后遍历 每个网络下的InterfaceAddress组。
      * 获得符合 <code>InetAddress instanceof Inet4Address</code> 条件的一个IpV4地址
-     *
-     * @return
      */
+    static {
+        String ip = null;
+        Enumeration allNetInterfaces;
+        try {
+            allNetInterfaces = NetworkInterface.getNetworkInterfaces();
+            while (allNetInterfaces.hasMoreElements()) {
+                NetworkInterface netInterface = (NetworkInterface) allNetInterfaces.nextElement();
+                List<InterfaceAddress> InterfaceAddress = netInterface.getInterfaceAddresses();
+                for (InterfaceAddress add : InterfaceAddress) {
+                    InetAddress Ip = add.getAddress();
+                    if (Ip != null && Ip instanceof Inet4Address) {
+                        if (StringUtils.equals(Ip.getHostAddress(), "127.0.0.1")) {
+                            continue;
+                        }
+                        ip = Ip.getHostAddress();
+                        break;
+                    }
+                }
+            }
+        } catch (SocketException e) {
+            logger.warn("获取本机Ip失败:异常信息:" + e.getMessage());
+            throw new RuntimeException(e);
+        }
+        hostIp = ip;
+    }
+
     public static String localIp() {
         return hostIp;
     }
@@ -70,34 +93,6 @@ public class IPHelper {
         }
     }
 
-
-    static {
-        String ip = null;
-        Enumeration allNetInterfaces;
-        try {
-            allNetInterfaces = NetworkInterface.getNetworkInterfaces();
-            while (allNetInterfaces.hasMoreElements()) {
-                NetworkInterface netInterface = (NetworkInterface) allNetInterfaces.nextElement();
-                List<InterfaceAddress> InterfaceAddress = netInterface.getInterfaceAddresses();
-                for (InterfaceAddress add : InterfaceAddress) {
-                    InetAddress Ip = add.getAddress();
-                    if (Ip != null && Ip instanceof Inet4Address) {
-                        if (StringUtils.equals(Ip.getHostAddress(), "127.0.0.1")) {
-                            continue;
-                        }
-                        ip = Ip.getHostAddress();
-                        break;
-                    }
-                }
-            }
-        } catch (SocketException e) {
-            logger.warn("获取本机Ip失败:异常信息:" + e.getMessage());
-            throw new RuntimeException(e);
-        }
-        hostIp = ip;
-    }
-
-
     /**
      * 获取主机第一个有效ip<br/>
      * 如果没有效ip，返回空串
@@ -110,7 +105,7 @@ public class IPHelper {
 
 
     public static void main(String[] args) throws Exception {
-        //System.out.println(localIp());
+        System.out.println(localIp());
         System.out.println(getRealIp());
         System.out.println(getHostFirstIp());
     }

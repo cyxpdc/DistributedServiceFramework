@@ -1,6 +1,5 @@
 package ares.remoting.framework.zookeeper;
 
-
 import ares.remoting.framework.helper.IPHelper;
 import ares.remoting.framework.helper.PropertyConfigeHelper;
 import ares.remoting.framework.model.InvokerService;
@@ -21,23 +20,26 @@ import java.util.Map;
 
 /**
  * 注册中心实现类
+ * 每个系统都可能是服务端，也可能是消费端，因此两个接口都要实现
+ * 每个系统各自上传自己的服务提供者列表providerServiceMap和客户端本地缓存serviceMetaDataMap4Consume到zookeeper
  * @author pdc
  */
 public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4Provider, IRegisterCenter4Governance {
 
-    private static RegisterCenter registerCenter = new RegisterCenter();
+    private static final RegisterCenter registerCenter = new RegisterCenter();
 
     /**
-     * 本地服务提供者列表缓存,Key:服务提供者接口  value:服务提供者服务方法列表
-     * 由我们到xml中写bean，注册到ProviderFactoryBean中，封装给providerServiceMap，然后写到Zookeeper
+     * 服务提供者列表,Key:服务提供者接口名  value:服务提供者服务方法列表
+     * 使用者到xml中写bean，注册到ProviderFactoryBean中，封装给providerServiceMap，然后写到Zookeeper
      * Netty服务端处理业务逻辑时会根据providerServiceMap来发起服务调用，返回给客户端
-     * 即架构图的服务注册
+     * 即服务注册
      */
     private static final Map<String, List<ProviderService>> providerServiceMap = Maps.newConcurrentMap();
+
     /**
      * 服务端ZK服务元信息,选择服务(第一次直接从ZK拉取,后续由ZK的监听机制主动更新)
      * 为服务调用方本地缓存，从zk拉取后，交给客户端使用
-     * 即架构图的服务订阅
+     * 即服务订阅
      */
     private static final Map<String, List<ProviderService>> serviceMetaDataMap4Consume = Maps.newConcurrentMap();
     /**
@@ -45,7 +47,7 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
      */
     private static String ZK_SERVICE = PropertyConfigeHelper.getZkService();
 
-    private static int ZK_SESSION_TIME_OUT = PropertyConfigeHelper.getZkConnectionTimeout();
+    private static int ZK_SESSION_TIME_OUT = PropertyConfigeHelper.getZkSessionTimeout();
 
     private static int ZK_CONNECTION_TIME_OUT = PropertyConfigeHelper.getZkConnectionTimeout();
 
@@ -55,13 +57,16 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
 
     public static String INVOKER_TYPE = "consumer";
 
-    private static volatile ZkClient zkClient = null;
+    private static volatile ZkClient zkClient = null;//单例
 
     public static RegisterCenter singleton() {
         return registerCenter;
     }
 
-
+    /**
+     * 服务端获取服务提供者信息
+     * @return providerServiceMap
+     */
     @Override
     public Map<String, List<ProviderService>> getProviderServiceMap() {
         return providerServiceMap;
@@ -69,7 +74,7 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
 
     /**
      * 消费端获取服务提供者信息
-     * @return
+     * @return serviceMetaDataMap4Consume
      */
     @Override
     public Map<String, List<ProviderService>> getServiceMetaDataMap4Consume() {
@@ -82,7 +87,9 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
      */
     @Override
     public void registerInvoker(InvokerService invoker) {
-        if (invoker == null) return;
+        if (invoker == null) {
+            return;
+        }
         //连接zk,注册服务
         synchronized (RegisterCenter.class) {
             if (zkClient == null)
@@ -99,7 +106,7 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
             String servicePath = ROOT_PATH + "/" + remoteAppKey + "/" + groupName + "/" + serviceNode + "/" + INVOKER_TYPE;
             exist = zkClient.exists(servicePath);
             if (!exist) {
-                zkClient.createPersistent(servicePath, true);
+                zkClient.createPersistent(servicePath, true);//持久
             }
             //创建当前服务器节点
             String localIp = IPHelper.localIp();
@@ -114,34 +121,35 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
 
     /**
      * 服务提供者信息注册：
-     * 将bean中配置好的serviceMetaData封装到providerServiceMap
+     * 将bean中配置好的serviceMetaData（serviceMetaData以方法为粒度）封装到providerServiceMap
      * 将providerServiceMap作为Zookeeper子节点写入Zookeeper
-     * @param serviceMetaData 服务提供者列表
+     * @param serviceMetaData 服务提供者信息列表
      */
     @Override
     public void registerProvider(final List<ProviderService> serviceMetaData) {
-        if (CollectionUtils.isEmpty(serviceMetaData)) return;
+        if (CollectionUtils.isEmpty(serviceMetaData)) {
+            return;
+        }
         //连接zk,注册服务
         synchronized (RegisterCenter.class) {
             for (ProviderService provider : serviceMetaData) {
-                String serviceItfKey = provider.getServiceInterface().getName();
+                String serviceItfKey = provider.getServiceItf().getName();
 
                 List<ProviderService> providers = providerServiceMap.get(serviceItfKey);
                 if (providers == null) {
                     providers = Lists.newArrayList();
                 }
                 providers.add(provider);
-                providerServiceMap.put(serviceItfKey, providers);
+                providerServiceMap.put(serviceItfKey, providers);//一个接口对应多个方法不同的提供者
             }
 
-            if (zkClient == null)
+            if (zkClient == null) {
                 zkClient = new ZkClient(ZK_SERVICE, ZK_SESSION_TIME_OUT, ZK_CONNECTION_TIME_OUT, new SerializableSerializer());
-
+            }
             //创建 ZK命名空间/当前部署应用APP命名空间/ 文件夹
-            String APP_KEY = serviceMetaData.get(0).getAppKey();
+            String APP_KEY = serviceMetaData.get(0).getAppKey();//随便一个提供者的app是一样的
             String ZK_PATH = ROOT_PATH + "/" + APP_KEY;
-            boolean exist = zkClient.exists(ZK_PATH);
-            if (!exist) {
+            if (!zkClient.exists(ZK_PATH)) {
                 zkClient.createPersistent(ZK_PATH, true);
             }
 
@@ -149,10 +157,11 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
                 //服务分组
                 String groupName = entry.getValue().get(0).getGroupName();
                 //创建服务提供者
-                String serviceNode = entry.getKey();
+                String serviceNode = entry.getKey();//接口名
                 String servicePath = ZK_PATH + "/" + groupName + "/" + serviceNode + "/" + PROVIDER_TYPE;
-                exist = zkClient.exists(servicePath);
-                if (!exist) {
+                //一个方法对应一个providerService，但是节点则是一个ip对应一个节点，一个实现可以用一个ip表示
+                //所以一个节点可以意味着多个方法，因此要用exist，最终就是一个接口对应一个节点
+                if (!zkClient.exists(servicePath)) {
                     zkClient.createPersistent(servicePath, true);
                 }
                 //创建当前服务器节点
@@ -161,13 +170,12 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
                 int workerThreads = entry.getValue().get(0).getWorkerThreads();//服务工作线程
                 String localIp = IPHelper.localIp();
                 String currentServiceIpNode = servicePath + "/" + localIp + "|" + serverPort + "|" + weight + "|" + workerThreads + "|" + groupName;
-                exist = zkClient.exists(currentServiceIpNode);
-                if (!exist) {
+                if (!zkClient.exists(currentServiceIpNode)) {
                     //注意,这里创建的是临时节点
-                    zkClient.createEphemeral(currentServiceIpNode);
+                    zkClient.createEphemeral(currentServiceIpNode);//这里也是一个接口对应一个节点
                 }
 
-                //监听注册服务的变化,同时更新数据到本地缓存
+                //监听当前注册服务的变化,同时更新数据到本地缓存
                 zkClient.subscribeChildChanges(servicePath, (parentPath, currentChilds) -> {
                     if (currentChilds == null) {
                         currentChilds = Lists.newArrayList();
@@ -182,39 +190,42 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
     }
 
     /**
-     * 利用ZK自动刷新当前存活的服务提供者列表数据providerServiceMap
-     * @param serviceIpList
+     * 利用ZK自动刷新当前存活的服务提供者列表数据providerServiceMap（下线）
+     * 上线新服务也就是新增了ProviderFactoryBean，会调用registerProvider来注册，因此这里只需要下线算法
+     * 每个系统各自负责刷新获取自己发布的服务即可,因此只需要当前系统发布的服务的ip还在，就添加到新列表里
+     * @param curServiceIpList
      */
-    private void refreshActivityService(List<String> serviceIpList) {
-        if (serviceIpList == null) {
-            serviceIpList = Lists.newArrayList();
+    private void refreshActivityService(List<String> curServiceIpList) {
+        if (curServiceIpList == null) {
+            curServiceIpList = Lists.newArrayList();
         }
+        Map<String, List<ProviderService>> newProviderServiceMap = Maps.newHashMap();
 
-        Map<String, List<ProviderService>> currentServiceMetaDataMap = Maps.newHashMap();
         for (Map.Entry<String, List<ProviderService>> entry : providerServiceMap.entrySet()) {
-            String key = entry.getKey();
-            List<ProviderService> providerServices = entry.getValue();
-
-            List<ProviderService> serviceMetaDataModelList = currentServiceMetaDataMap.get(key);
-            if (serviceMetaDataModelList == null) {
-                serviceMetaDataModelList = Lists.newArrayList();
+            //旧列表
+            String interfaceName = entry.getKey();
+            List<ProviderService> oldProviderServices = entry.getValue();
+            //新列表
+            List<ProviderService> newProviderServices = newProviderServiceMap.get(interfaceName);
+            if (newProviderServices == null) {
+                newProviderServices = Lists.newArrayList();
             }
-
-            for (ProviderService serviceMetaData : providerServices) {
-                if (serviceIpList.contains(serviceMetaData.getServerIp())) {
-                    serviceMetaDataModelList.add(serviceMetaData);
+            //当前列表和旧列表对比
+            for (ProviderService oldProviderService : oldProviderServices) {
+                if (curServiceIpList.contains(oldProviderService.getServerIp())) {
+                    newProviderServices.add(oldProviderService);
                 }
             }
-            currentServiceMetaDataMap.put(key, serviceMetaDataModelList);
+            newProviderServiceMap.put(interfaceName, newProviderServices);
         }
-
         providerServiceMap.clear();
-        System.out.println("currentServiceMetaDataMap,"+ JSON.toJSONString(currentServiceMetaDataMap));
-        providerServiceMap.putAll(currentServiceMetaDataMap);
+        System.out.println("newProviderServiceMap,"+ JSON.toJSONString(newProviderServiceMap));
+        providerServiceMap.putAll(newProviderServiceMap);
     }
 
     /**
      * 初始化服务提供者信息客户端本地缓存serviceMetaDataMap4Consume
+     * 这里则需要上下线，需要消费端需要获取所有服务信息，且只有这一个入口，不像服务端，上线是一个入口(FactoryBean)下线是一个入口(refreshActivityService)
      * @param remoteAppKey
      * @param groupName
      */
@@ -238,7 +249,7 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
         for (String serviceName : providerServices) {
             String servicePath = providePath + "/" + serviceName + "/" + PROVIDER_TYPE;
             List<String> ipPathList = zkClient.getChildren(servicePath);
-            for (String ipPath : ipPathList) {
+            for (String ipPath : ipPathList) {//对每个ip创建一个ProviderService
                 String[] providerInfo = StringUtils.split(ipPath, "|");
                 String serverIp = providerInfo[0];
                 String serverPort = providerInfo[1];
@@ -252,7 +263,7 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
                 }
                 ProviderService providerService = new ProviderService();
                 try {
-                    providerService.setServiceInterface(ClassUtils.getClass(serviceName));
+                    providerService.setServiceItf(ClassUtils.getClass(serviceName));
                 } catch (ClassNotFoundException e) {
                     throw new RuntimeException(e);
                 }
@@ -293,7 +304,7 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
             if (newProviderServiceList == null) {
                 newProviderServiceList = Lists.newArrayList();
             }
-            //用来添加新服务用
+            //用来添加新服务
             ProviderService flag = null;
             //保存还拥有的服务，如果有下线了的服务器的话
             flag = saveOldService(curServiceIpList, oldServiceList, newProviderServiceList, flag);
@@ -310,7 +321,7 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
             if (curServiceIpList.contains(oldServiceMetaData.getServerIp())) {
                 newProviderServiceList.add(oldServiceMetaData);
                 flag = oldServiceMetaData;
-                curServiceIpList.remove(oldServiceMetaData.getServerIp());
+                //curServiceIpList.remove(oldServiceMetaData.getServerIp());
             }
         }
         return flag;

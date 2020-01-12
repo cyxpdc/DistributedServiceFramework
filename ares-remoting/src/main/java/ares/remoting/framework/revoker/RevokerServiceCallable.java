@@ -13,13 +13,12 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Netty 请求发起线程
- *
+ * Netty请求发起线程
  * @author pdc
  */
 public class RevokerServiceCallable implements Callable<AresResponse> {
 
-    private static final Logger logger = LoggerFactory.getLogger(RevokerServiceCallable.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(RevokerServiceCallable.class);
 
     private Channel channel;
     private InetSocketAddress inetSocketAddress;
@@ -35,6 +34,12 @@ public class RevokerServiceCallable implements Callable<AresResponse> {
         this.request = request;
     }
 
+    /**
+     * 发起请求AresRequest，返回响应AresResponse
+     * 由RevokerProxyBeanFactory调用
+     * @return
+     * @throws Exception
+     */
     @Override
     public AresResponse call() throws Exception {
         //初始化返回结果容器,将本次调用的唯一标识作为Key存入返回结果的Map
@@ -48,9 +53,9 @@ public class RevokerServiceCallable implements Callable<AresResponse> {
             }
             //若获取的channel通道已经不可用,则重新获取一个
             while (!channel.isOpen() || !channel.isActive() || !channel.isWritable()) {
-                logger.warn("----------retry get new Channel------------");
+                LOGGER.warn("----------retry get new Channel------------");
                 channel = blockingQueue.poll(request.getInvokeTimeout(), TimeUnit.MILLISECONDS);
-                if (channel == null) {
+                while (channel == null) {
                     //若队列中没有可用的Channel,则重新注册一个Channel
                     channel = NettyChannelPoolFactory.singleton().registerChannel(inetSocketAddress);
                 }
@@ -62,7 +67,7 @@ public class RevokerServiceCallable implements Callable<AresResponse> {
             long invokeTimeout = request.getInvokeTimeout();
             return RevokerResponseHolder.getValue(request.getUniqueKey(), invokeTimeout);
         } catch (Exception e) {
-            logger.error("service invoke error.", e);
+            LOGGER.error("service invoke error.", e);
         } finally {
             //本次调用完毕后,将Netty的通道channel重新释放到队列中,以便下次调用复用
             NettyChannelPoolFactory.singleton().release(blockingQueue, channel, inetSocketAddress);

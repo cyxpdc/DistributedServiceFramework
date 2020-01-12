@@ -3,6 +3,8 @@ package ares.remoting.framework.revoker;
 import ares.remoting.framework.model.AresResponse;
 import ares.remoting.framework.model.AresResponseWrapper;
 import com.google.common.collect.Maps;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -15,6 +17,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class RevokerResponseHolder {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(RevokerResponseHolder.class);
     /**
      * 服务返回结果Map，key为唯一标识本次调用
      */
@@ -40,8 +43,8 @@ public class RevokerResponseHolder {
                             }
                             Thread.sleep(10);
                         }
-                    } catch (Throwable e) {
-                        e.printStackTrace();
+                    } catch (InterruptedException e) {
+                        LOGGER.warn("Thread.sleep failure" + e);
                     }
 
                 }
@@ -59,7 +62,8 @@ public class RevokerResponseHolder {
 
 
     /**
-     * 将Netty调用异步返回结果放入阻塞队列
+     * 由NettyClientInvokeHandler#channelRead0调用，将Netty调用异步返回结果放入阻塞队列
+     * 最终由RevokerServiceCallable#call调用
      * @param response
      */
     public static void putResultValue(AresResponse response) {

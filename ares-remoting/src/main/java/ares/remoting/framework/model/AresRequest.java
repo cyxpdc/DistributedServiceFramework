@@ -3,6 +3,7 @@ package ares.remoting.framework.model;
 import java.io.Serializable;
 
 /**
+ * 客户端请求
  * @author pdc
  */
 public class AresRequest implements Serializable {

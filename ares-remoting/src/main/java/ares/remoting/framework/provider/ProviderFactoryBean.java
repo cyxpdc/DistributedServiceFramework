@@ -13,7 +13,6 @@ import java.util.List;
 /**
  * 服务Bean发布入口
  * 实现FactoryBean，作为bean注册到Spring中
- *
  * @author pdc
  */
 public class ProviderFactoryBean implements FactoryBean, InitializingBean {
@@ -60,6 +59,7 @@ public class ProviderFactoryBean implements FactoryBean, InitializingBean {
     private int weight = 1;
     /**
      * 服务端线程数,默认10个线程
+     * 限制服务端该服务运行线程数，用于实现资源的隔离与服务端的限流
      */
     private int workerThreads = 10;
 
@@ -79,7 +79,7 @@ public class ProviderFactoryBean implements FactoryBean, InitializingBean {
      * @throws Exception
      */
     @Override
-    public void afterPropertiesSet() throws Exception {
+    public void afterPropertiesSet(){
         //启动Netty服务端
         NettyServer.singleton().start(Integer.parseInt(serverPort));
         //完成服务端信息的注册
@@ -92,12 +92,12 @@ public class ProviderFactoryBean implements FactoryBean, InitializingBean {
         Method[] methods = serviceObject.getClass().getDeclaredMethods();
         for (Method method : methods) {
             ProviderService providerService = new ProviderService();
-            providerService.setServiceInterface(serviceItf);
+            providerService.setServiceItf(serviceItf);
             providerService.setServiceObject(serviceObject);
-            providerService.setServerIp(IPHelper.localIp());
+            providerService.setServerIp(IPHelper.localIp());//ProviderService比ProviderFactoryBean多出来的
             providerService.setServerPort(Integer.parseInt(serverPort));
             providerService.setTimeout(timeout);
-            providerService.setServiceMethod(method);
+            providerService.setServiceMethod(method);//ProviderService比ProviderFactoryBean多出来的
             providerService.setWeight(weight);
             providerService.setWorkerThreads(workerThreads);
             providerService.setAppKey(appKey);

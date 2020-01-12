@@ -46,8 +46,9 @@ public class NettyServer {
      */
     public void start(final int port) {
         synchronized (NettyServer.class) {
-            if (bossGroup != null || workerGroup != null) return;
-
+            if (bossGroup != null || workerGroup != null) {
+                return;
+            }
             bossGroup = new NioEventLoopGroup();
             workerGroup = new NioEventLoopGroup();
             ServerBootstrap serverBootstrap = new ServerBootstrap();
@@ -60,7 +61,7 @@ public class NettyServer {
                     .handler(new LoggingHandler(LogLevel.INFO))
                     .childHandler(new ChannelInitializer<SocketChannel>() {
                         @Override
-                        protected void initChannel(SocketChannel ch) throws Exception {
+                        protected void initChannel(SocketChannel ch) {
                             //注册解码器NettyDecoderHandler
                             ch.pipeline().addLast(new NettyDecoderHandler(AresRequest.class, serializeType));
                             //注册编码器NettyEncoderHandler

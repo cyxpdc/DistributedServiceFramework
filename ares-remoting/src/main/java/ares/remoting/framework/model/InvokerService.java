@@ -43,36 +43,8 @@ public class InvokerService implements Serializable {
         this.serviceItf = serviceItf;
     }
 
-    public Object getServiceObject() {
-        return serviceObject;
-    }
-
-    public void setServiceObject(Object serviceObject) {
-        this.serviceObject = serviceObject;
-    }
-
-    public Method getServiceMethod() {
-        return serviceMethod;
-    }
-
-    public void setServiceMethod(Method serviceMethod) {
-        this.serviceMethod = serviceMethod;
-    }
-
-    public String getInvokerIp() {
-        return invokerIp;
-    }
-
     public void setInvokerIp(String invokerIp) {
         this.invokerIp = invokerIp;
-    }
-
-    public int getInvokerPort() {
-        return invokerPort;
-    }
-
-    public void setInvokerPort(int invokerPort) {
-        this.invokerPort = invokerPort;
     }
 
     public long getTimeout() {
