@@ -86,7 +86,8 @@ public class RevokerProxyBeanFactory implements InvocationHandler {
         request.setArgs(args);
 
         try {
-            //构建用来发起调用的线程池
+            //构建用来发起调用的线程池,使用固定数目的n个线程，使用无界队列LinkedBlockingQueue，线程创建后不会超时终止。
+            //如果任务过多，某个任务执行过慢，可能会出现出现OOM，可以自定义队列为ArrayBlockingQueue或Disruptor
             if (fixedThreadPool == null) {
                 synchronized (RevokerProxyBeanFactory.class) {
                     if (null == fixedThreadPool) {
@@ -98,7 +99,7 @@ public class RevokerProxyBeanFactory implements InvocationHandler {
             String serverIp = curProvider.getServerIp();
             int serverPort = curProvider.getServerPort();
             InetSocketAddress inetSocketAddress = new InetSocketAddress(serverIp, serverPort);
-            //提交本次调用信息到线程池fixedThreadPool,发起调用
+            //提交本次调用信息到线程池fixedThreadPool,发起调用；使用Future保证任务只能被执行一次
             Future<AresResponse> responseFuture = fixedThreadPool.submit(RevokerServiceCallable.of(inetSocketAddress, request));
             //获取调用的返回结果
             AresResponse response = responseFuture.get(request.getInvokeTimeout(), TimeUnit.MILLISECONDS);

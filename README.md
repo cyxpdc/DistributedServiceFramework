@@ -291,13 +291,13 @@ NettyChannelPoolFactory：Channel连接池工厂类，为每一个服务提供�
 
 > 3.客户端发起服务调用后需要同步等待调用结果，但是Netty是异步框架，所以需要自己实现同步等待机制(为了保证顺序)
 
-为每次请求新建一个阻塞队列，返回结果的时候，存入该阻塞队列，若在超时时间内返回结果值，则调用端将该返回结果从阻塞队列中取出返回给调用方，否则超时返回null(亮点)
+为每次请求新建一个阻塞队列，返回结果的时候，存入该阻塞队列，若在超时时间内返回结果值，则调用端将该返回结果从阻塞队列中取出返回给调用方，否则超时返回null(亮点，如果没有此阻塞队列，则无法获取结果)
 
 AresRequest：客户端请求，封装了唯一标识、服务提供者信息、调用的方法名称、传递参数、消费端应用名、消费请求超时时长
 
 AresResponse：服务端响应，封装了唯一标识、超时时间、返回的结果对象
 
-AresResponseWrapper：异步调用返回结果AresResponse的包装类，由保存返回结果的阻塞队列和返回时间组成；同时定义了判断返回结果是否超时过期的方法isExpire()；用来实现对Netty发起异步调用后同步等待功能
+AresResponseWrapper：异步调用返回结果AresResponse的包装类，由保存返回结果的阻塞队列和返回时间组成；同时定义了判断返回结果是否超时过期的方法isExpire()；用来实现对Netty发起异步调用后同步等待功能，等于是提前做了一个AresResponse，先放在客户端，服务端做好了AresResponse后将此AresResponse放入AresResponseWrapper即可，通过uniqueKey来进行交换
 
 RevokerResponseHolder：保存及操作返回结果的数据容器类
 
@@ -314,6 +314,12 @@ RevokerProxyBeanFactory：远程服务在服务消费端的动态代理实现，
 1 一开始Spring会将RevokerFactory注入到容器中，其afterPropertiesSet方法会初始化服务提供者列表和NettyChannelPoolFactory（创建Channel，即Netty客户端，使用CountDownLatch来等待Channel创建），还会将其serviceObject属性由RevokerProxyBeanFactory#getProxy赋值，即RevokerProxyBeanFactory作为代理，那么客户端调用方法时将会调用invoke方法（JDK动态代理）
 
 2 invoke方法根据接口和负载均衡策略选择服务提供者，创建AresRequest对象，通过单例线程池fixedThreadPool发起请求，即调用RevokerServiceCallable#call
+
+```markdown
+注意：FixedThreadPool使用固定数目的n个线程，使用无界队列LinkedBlockingQueue，线程创建后不会超时终止。
+如果任务过多，任务执行过慢，可能会出现出现OOM；
+可以自定义队列为ArrayBlockingQueue或Disruptor
+```
 
 3 RevokerServiceCallable#call方法首先根据AresRequest的唯一标识创建AresResponseWrapper，并将此唯一标识保存到responseMap< String, AresResponseWrapper >中，然后从NettyChannelPoolFactory中根据服务提供者ip获取对应的Channel连接，将AresRequest写入到Channel中
 

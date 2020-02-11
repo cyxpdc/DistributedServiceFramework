@@ -137,7 +137,7 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
 
     /**
      * 服务提供者信息注册：
-     * 将bean中配置好的serviceMetaData（serviceMetaData以方法为粒度）封装到providerServiceMap
+     * 将bean中配置好的serviceMetaData（serviceMetaData以方法为粒度，在NettyServerInvokeHandler中才能得到指定方法）封装到providerServiceMap
      * 将providerServiceMap作为Zookeeper子节点写入Zookeeper
      * @param serviceMetaData 服务提供者信息列表
      */
@@ -341,7 +341,8 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
             if (curServiceIpList.contains(oldServiceMetaData.getServerIp())) {
                 newProviderServiceList.add(oldServiceMetaData);
                 flag = oldServiceMetaData;
-                //curServiceIpList.remove(oldServiceMetaData.getServerIp());
+                //原先有的服务就移除，这样saveNewService的逻辑就可以为“直接添加”
+                curServiceIpList.remove(oldServiceMetaData.getServerIp());
             }
         }
         return flag;
@@ -457,7 +458,7 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
      * 启动定时任务
      * 将变更后的路由表写⼊本地⽂件
      *
-     * ScheduledExecutorService继承与ExecutorService接口并添加了scheduleAtFixedRate和scheduleWithFixedDelay等方法。
+     * ScheduledExecutorService继承于ExecutorService接口并添加了scheduleAtFixedRate和scheduleWithFixedDelay等方法。
      * 两个方法的区别是：
      * 前者是周期性的按照一定的时间进行任务的执行,如果一个任务执行超过了周期时间，则任务执行完之后会马上进行下一次任务的执行。
      * 而后者在这样的情况出现的时候会在任务执行完之后仍然间隔周期时间进行下一次任务的执行。

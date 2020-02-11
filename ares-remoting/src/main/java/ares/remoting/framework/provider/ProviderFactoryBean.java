@@ -15,6 +15,7 @@ import java.util.List;
  * 实现FactoryBean，作为bean注册到Spring中
  * @author pdc
  */
+
 public class ProviderFactoryBean implements FactoryBean, InitializingBean {
     /**
      * 服务接口：
@@ -80,10 +81,11 @@ public class ProviderFactoryBean implements FactoryBean, InitializingBean {
      */
     @Override
     public void afterPropertiesSet(){
-        //启动Netty服务端
+        //启动Netty服务端，里面加了锁和使用单例，保证服务端只会启动一次
         NettyServer.singleton().start(Integer.parseInt(serverPort));
         //完成服务端信息的注册
-        //buildProviderServiceInfos()：以服务方法为粒度，注册到zk,元数据注册中心
+        //buildProviderServiceInfos()：以服务方法为粒度(NettyServerInvokeHandler#channelRead0中才能得到消费端调用的方法对应的提供者)
+        // 注册到zk,元数据注册中心
         RegisterCenter.singleton().registerProvider(buildProviderServiceInfos());
     }
 

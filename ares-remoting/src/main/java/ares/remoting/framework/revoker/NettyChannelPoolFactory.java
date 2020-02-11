@@ -36,7 +36,7 @@ public class NettyChannelPoolFactory {
     private static final NettyChannelPoolFactory channelPoolFactory = new NettyChannelPoolFactory();
 
     /**
-     * Key为服务提供者地址,value为Netty Channel阻塞队列
+     * Key为服务提供者地址,即机器，Value为Netty Channel阻塞队列
      */
     private static final Map<InetSocketAddress, ArrayBlockingQueue<Channel>> channelPoolMap = Maps.newConcurrentMap();
     /**
@@ -79,18 +79,14 @@ public class NettyChannelPoolFactory {
         //根据服务提供者地址列表初始化Channel阻塞队列
         //并以地址为Key,地址对应的Channel阻塞队列为value,存入channelPoolMap
         for (InetSocketAddress socketAddress : socketAddressSet) {
-            int realChannelConnectSize = 0;
-            while (realChannelConnectSize < channelConnectSize) {
+            for(int realChannelConnectSize = 0;realChannelConnectSize < channelConnectSize;realChannelConnectSize++){
                 Channel channel = null;
                 while (channel == null) {
-                    //若channel不存在,则注册新的Netty Channel
-                    //新的Channel会与服务端进行通信
+                    //若channel不存在,则注册新的Channel与服务端进行通信
                     channel = registerChannel(socketAddress);
                 }
-                //计数器,初始化的时候存入阻塞队列的Netty Channel个数不超过channelConnectSize
-                realChannelConnectSize++;
-                //将新注册的Netty Channel存入阻塞队列channelArrayBlockingQueue
-                // 并将阻塞队列channelArrayBlockingQueue作为value存入channelPoolMap
+                //将阻塞队列channelArrayBlockingQueue作为value存入channelPoolMap
+                //并将新注册的Netty Channel存入阻塞队列channelArrayBlockingQueue
                 ArrayBlockingQueue<Channel> channelArrayBlockingQueue = channelPoolMap.get(socketAddress);
                 if (channelArrayBlockingQueue == null) {
                     channelArrayBlockingQueue = new ArrayBlockingQueue<>(channelConnectSize);
@@ -100,7 +96,6 @@ public class NettyChannelPoolFactory {
             }
         }
     }
-
 
     /**
      * 根据服务提供者地址获取对应的Netty Channel阻塞队列
