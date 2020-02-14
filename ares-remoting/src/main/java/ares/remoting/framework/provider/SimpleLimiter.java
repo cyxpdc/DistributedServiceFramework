@@ -15,7 +15,7 @@ class SimpleLimiter {
 
     //当前令牌桶中的令牌数量
     private long storedPermits = 0;
-    //令牌桶的容量
+    //令牌桶的容量，防止突发流量
     private long maxPermits = 3;
     //下⼀令牌产⽣时间
     private long next = System.nanoTime();

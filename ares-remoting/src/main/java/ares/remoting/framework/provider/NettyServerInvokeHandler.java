@@ -38,6 +38,8 @@ public class NettyServerInvokeHandler extends SimpleChannelInboundHandler<AresRe
      */
     private static final Map<String, Semaphore> SERVICE_KEY_SEMAPHORE_MAP = Maps.newConcurrentMap();
 
+    //private static final SimpleLimiter LIMITER = new SimpleLimiter();
+
     /**
      * 接收客户端发来的数据，调用方法，然后将方法返回的结果写回客户端
      * @param ctx
@@ -71,6 +73,7 @@ public class NettyServerInvokeHandler extends SimpleChannelInboundHandler<AresRe
                 //利用反射发起服务调用，利用semaphore实现限流
                 Object serviceObject = localProviderCache.getServiceObject();
                 Method method = localProviderCache.getServiceMethod();
+                //LIMITER.acquire();
                 acquire = semaphore.tryAcquire(consumeTimeOut, TimeUnit.MILLISECONDS);
                 if (acquire) {
                     result = method.invoke(serviceObject, request.getArgs());
