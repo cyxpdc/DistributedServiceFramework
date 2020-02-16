@@ -155,6 +155,16 @@ SerializeType：序列化类型枚举
 
 ## 3.实现与Spring的集成
 
+（dubbo 跟 spring 集成，也是因为 dubbo 定义了自己的 DubboNamespaceHandler，注册了对各个标签的解析器）
+
+原理：
+
+>解析ares-server时，发现`AresServer:service`不是自定义标签，且发现此xml文件的`xmlns:AresServer`有一个url，那么根据此url去spring.handlers得到自定义的NamespaceHandler，源码中会调用NamespaceHandler#parse方法解析自定义标签；
+>解析自定义标签时，会同样根据url去spring.schemes查找对应的xsd文件（验证标签配置是否正确），然后使用在解析之前就调用了inti方法注册的BeanDefinitionParser实现类去解析具体的标签定义的属性到我们的ProviderFactoryBean里。
+>（NamespaceHandler是处理namespace的，并不直接用于解析自定义标签，它底层会委托给BeanDefinitionParser接口，使用Map保存了此接口）
+>
+>注：spring.schemas 告知 spring 标签的 xsd 文件在哪；spring.handlers 告知 spring 解析标签的 NamespaceHandler 的全路径名
+
 使用Spring来管理远程服务的发布与引入，实现了远程服务调用编程界面与本地Bean方法调用的一致性，屏蔽了远程服务调用与本地方法调用的差异性
 
 - 类简介

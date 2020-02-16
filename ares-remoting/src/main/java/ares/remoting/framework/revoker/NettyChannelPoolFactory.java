@@ -164,19 +164,16 @@ public class NettyChannelPoolFactory {
 
             final List<Boolean> isSuccessHolder = Lists.newArrayListWithCapacity(1);
             //监听Channel是否建立成功
-            channelFuture.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    //若Channel建立成功,保存建立成功的标记
-                    if (future.isSuccess()) {
-                        isSuccessHolder.add(Boolean.TRUE);
-                    } else {
-                        //若Channel建立失败,保存建立失败的标记
-                        future.cause().printStackTrace();
-                        isSuccessHolder.add(Boolean.FALSE);
-                    }
-                    connectedLatch.countDown();
+            channelFuture.addListener((ChannelFutureListener) future -> {
+                //若Channel建立成功,保存建立成功的标记
+                if (future.isSuccess()) {
+                    isSuccessHolder.add(Boolean.TRUE);
+                } else {
+                    //若Channel建立失败,保存建立失败的标记
+                    future.cause().printStackTrace();
+                    isSuccessHolder.add(Boolean.FALSE);
                 }
+                connectedLatch.countDown();
             });
 
             connectedLatch.await();
