@@ -15,10 +15,10 @@ import java.lang.reflect.Proxy;
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * 消费端bean代理工厂
@@ -73,7 +73,7 @@ public class RevokerProxyBeanFactory implements InvocationHandler {
         ProviderService providerService = clusterStrategyService.select(providerServices);
         //复制一份服务提供者信息
         ProviderService curProvider = providerService.copy();
-        //设置本次调用服务的方法以及接口
+        //设置本次调用服务的方法以及接口（负载均衡策略中有些权重算法创建了新的ProviderService，这里设置一下比较保险）
         curProvider.setServiceMethod(method);
         curProvider.setServiceItf(targetInterface);
 
@@ -106,8 +106,8 @@ public class RevokerProxyBeanFactory implements InvocationHandler {
             if (response != null) {
                 return response.getResult();
             }
-        } catch (Exception e) {
-            LOGGER.error("RevokerProxyBeanFactory invoke failure ： " + e);
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            LOGGER.error("RevokerProxyBeanFactory invoke failure(responseFuture.get) ： " + e);
             throw new RuntimeException(e);
         }
         return null;
@@ -118,5 +118,50 @@ public class RevokerProxyBeanFactory implements InvocationHandler {
                 Thread.currentThread().getContextClassLoader(),
                 new Class<?>[]{targetInterface},
                 this);
+    }
+
+    // 创建锁与条件变量
+    private static final Lock lock = new ReentrantLock();
+
+    private static final Condition done = lock.newCondition();
+
+    private static AresResponse response  = null;
+    // 调用方通过该方法等待结果
+    private Object get(long timeout){
+        long start = System.nanoTime();
+        lock.lock();
+        try {
+            while (!isDone()) {
+                done.await(timeout,TimeUnit.SECONDS);
+                long cur=System.nanoTime();
+                if (isDone() || cur-start > timeout){
+                    break;
+                }
+            }
+        } catch (InterruptedException e) {
+            LOGGER.error("InterruptedException ： " + e);
+        } finally {
+            lock.unlock();
+        }
+        if(!isDone()){
+            return null;
+        }
+        return response;
+    }
+    // RPC 结果是否已经返回
+    boolean isDone() {
+        return response != null;
+    }
+    // RPC 结果返回时调用该方法
+    public static void doReceived(AresResponse res) {
+        lock.lock();
+        try {
+            response = res;
+            if (done != null) {
+                done.signal();
+            }
+        } finally {
+            lock.unlock();
+        }
     }
 }

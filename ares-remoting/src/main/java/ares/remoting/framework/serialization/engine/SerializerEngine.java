@@ -34,7 +34,7 @@ public class SerializerEngine {
     public static <T> byte[] serialize(T obj, String serializeType) {
         SerializeType serialize = SerializeType.queryByType(serializeType);
         if (serialize == null) {
-            throw new RuntimeException("serialize is null");
+            throw new RuntimeException("serialize is  null");
         }
         ISerializer serializer = serializerMap.get(serialize);
         if (serializer == null) {

@@ -48,7 +48,7 @@ public class RevokerServiceCallable implements Callable<AresResponse> {
         ArrayBlockingQueue<Channel> blockingQueue = NettyChannelPoolFactory.singleton().acquire(inetSocketAddress);
         try {
             if (channel == null) {
-                //从队列中获取本次调用的Netty通道channel
+                //从队列中获取本次调用的Netty通道channel，取不到就阻塞，控制了客户端的并发量
                 channel = blockingQueue.poll(request.getInvokeTimeout(), TimeUnit.MILLISECONDS);
             }
             //若获取的channel通道已经不可用,则重新获取一个

@@ -63,7 +63,7 @@ public class RevokerFactoryBean implements FactoryBean, InitializingBean {
         IRegisterCenter4Invoker registerCenter4Consumer = RegisterCenter.singleton();
         //初始化服务提供者列表到消费端本地缓存serviceMetaDataMap4Consume
         registerCenter4Consumer.initProviderMap(remoteAppKey, groupName);
-        //初始化Netty Channel连接池，通过连接池可以做到Channel长连接复用，提供服务调用性能
+        //初始化Netty Channel连接池，通过连接池可以做到Channel长连接复用，提供服务调用性能，也做了客户端限流
         Map<String, List<ProviderService>> providerMap = registerCenter4Consumer.getServiceMetaDataMap4Consume();
         if (MapUtils.isEmpty(providerMap)) {
             throw new RuntimeException("service provider list is empty.");

@@ -23,18 +23,22 @@ class SimpleLimiter {
     private static final long interval = 1000_000_000;
 
     /**
-     * 如果线程请求令牌的时间在下一令牌产生时间之后，那么该线程立刻就能够获取令牌；
-     * 反之，如果请求时间在下一令牌产生时间之前，那么该线程是在下一令牌产生的时间获取令牌。由于此时下
-     * 一令牌已经被该线程预占，所以下一令牌产生的时间需要加上1秒。
+     * 初始时，系统就开始产生令牌，不过没有使用后台线程来往令牌桶里加令牌，所以需要在代码里的(now - next) / interval计算
      *
-     * 令牌要首先从令牌桶中出，所以我们需要按需计算令牌桶中的数量，当有线程请求令牌时，先从令牌桶中出
+     * 有请求来时，首先判断请求令牌的时间now是否在下一令牌产生时间next之后：
+     *     如果是，那么先将这期间产生的令牌加入桶，且next变为now，即之前的时间都生成了令牌了，从now开始继续计算即可
+     *     如果不是，则什么都不做
+     * 得到能够获取令牌的时间at=next，然后判断是否能从桶里取令牌：（代码优化掉了if）
+     *     桶里还有令牌的话就取
+     *     桶里没有令牌的话就让next移到下一个interval，表示当前令牌被预支了
+     * 最后at-now得到等待的时间：如果在第一步中next变为了now，说明不用等，如果没有，则需要等
      */
     public void acquire() {
         //申请令牌时的时间
         long now = System.nanoTime();
         long at;
         synchronized(this){
-            if (now > next) {
+            if (now > next) {//判断是否可以往令牌桶里加令牌
                 //新产⽣的令牌数,可能为0、1..，为整数
                 long newPermits = (now - next) / interval;
                 //新令牌增加到令牌桶
@@ -43,6 +47,7 @@ class SimpleLimiter {
                 next = now;
             }
             //能够获取令牌的时间
+            //如果上面都if可以运行，则next = now运行了，则说明可以获取令牌，因为next时刻就产生了令牌，所以不用等
             at = next;
             //令牌桶中能提供的令牌是否有一个，如果没有，则需要预支令牌
             long fb = Math.min(1, storedPermits);

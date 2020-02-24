@@ -80,7 +80,7 @@ public class NettyServerInvokeHandler extends SimpleChannelInboundHandler<AresRe
                 }
             } catch (IllegalAccessException |  InterruptedException | InvocationTargetException e) {
                 System.out.println(JSON.toJSONString(localProviderCaches) + "  " + methodName+" " + e.getMessage());
-                result = e;
+                result = e;//恢复
             } finally {
                 if (acquire) {
                     semaphore.release();

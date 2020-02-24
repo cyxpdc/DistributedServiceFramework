@@ -146,7 +146,7 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
         if (CollectionUtils.isEmpty(serviceMetaData)) {
             return;
         }
-        //连接zk,注册服务
+        //连接zk,注册服务，使用synchronized防止重复注册
         synchronized (RegisterCenter.class) {
             for (ProviderService provider : serviceMetaData) {
                 String serviceItfKey = provider.getServiceItf().getName();
@@ -207,37 +207,35 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
     }
 
     /**
-     * 利用ZK自动刷新当前存活的服务提供者列表数据providerServiceMap（下线）
+     * 利用ZK自动刷新当前存活的服务提供者列表数据providerServiceMap
      * 上线新服务也就是新增了ProviderFactoryBean，会调用registerProvider来注册，因此这里只需要下线算法
      * 每个系统各自负责刷新获取自己发布的服务即可,因此只需要当前系统发布的服务的ip还在，就添加到新列表里
-     * @param curServiceIpList
+     * @param serviceIpList
      */
-    private void refreshActivityService(List<String> curServiceIpList) {
-        if (curServiceIpList == null) {
-            curServiceIpList = Lists.newArrayList();
+    private void refreshActivityService(List<String> serviceIpList) {
+        if (serviceIpList == null) {
+            serviceIpList = Lists.newArrayList();
         }
-        Map<String, List<ProviderService>> newProviderServiceMap = Maps.newHashMap();
+        Map<String, List<ProviderService>> currentServiceMetaDataMap = Maps.newHashMap();
 
         for (Map.Entry<String, List<ProviderService>> entry : providerServiceMap.entrySet()) {
             //旧列表
             String interfaceName = entry.getKey();
             List<ProviderService> oldProviderServices = entry.getValue();
             //新列表
-            List<ProviderService> newProviderServices = newProviderServiceMap.get(interfaceName);
-            if (newProviderServices == null) {
-                newProviderServices = Lists.newCopyOnWriteArrayList();
+            List<ProviderService> serviceMetaDataModelList = currentServiceMetaDataMap.get(interfaceName);
+            if (serviceMetaDataModelList == null) {
+                serviceMetaDataModelList = Lists.newCopyOnWriteArrayList();
             }
             //当前列表和旧列表对比
             for (ProviderService oldProviderService : oldProviderServices) {
-                if (curServiceIpList.contains(oldProviderService.getServerIp())) {
-                    newProviderServices.add(oldProviderService);
+                if (serviceIpList.contains(oldProviderService.getServerIp())) {
+                    serviceMetaDataModelList.add(oldProviderService);
                 }
             }
-            newProviderServiceMap.put(interfaceName, newProviderServices);
+            currentServiceMetaDataMap.put(interfaceName, serviceMetaDataModelList);
         }
-        providerServiceMap.clear();
-        System.out.println("newProviderServiceMap,"+ JSON.toJSONString(newProviderServiceMap));
-        providerServiceMap.putAll(newProviderServiceMap);
+        providerServiceMap.putAll(currentServiceMetaDataMap);
         changed = true;
     }
 
@@ -341,7 +339,8 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
             if (curServiceIpList.contains(oldServiceMetaData.getServerIp())) {
                 newProviderServiceList.add(oldServiceMetaData);
                 flag = oldServiceMetaData;
-                //原先有的服务就移除，这样saveNewService的逻辑就可以为“直接添加”
+                // 原先有的服务就移除，因为消费端不需要“一个接口对应多个不同方法的提供者”
+                // 只需要一个接口对应一个ip的提供者，这样saveNewService的逻辑就可以为“直接添加”
                 curServiceIpList.remove(oldServiceMetaData.getServerIp());
             }
         }

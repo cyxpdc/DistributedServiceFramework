@@ -24,6 +24,7 @@ public class NettyClientInvokeHandler extends SimpleChannelInboundHandler<AresRe
     @Override
     protected void channelRead0(ChannelHandlerContext channelHandlerContext, AresResponse response) throws Exception {
         RevokerResponseHolder.putResultValue(response);
+        //RevokerProxyBeanFactory.doReceived(response);
     }
 
     @Override
