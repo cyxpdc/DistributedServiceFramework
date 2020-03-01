@@ -7,6 +7,7 @@ import java.lang.reflect.Method;
 
 /**
  * 服务注册中心的服务提供者注册信息
+ *
  * @author pdc
  */
 public class ProviderService implements Serializable {

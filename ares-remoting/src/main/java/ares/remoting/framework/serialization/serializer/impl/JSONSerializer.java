@@ -18,40 +18,42 @@ import java.util.Date;
  */
 public class JSONSerializer implements ISerializer {
 
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     static {
-        objectMapper.configure(JsonParser.Feature.ALLOW_COMMENTS, true);
-        objectMapper.configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
-        objectMapper.configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
-        objectMapper.configure(JsonParser.Feature.ALLOW_UNQUOTED_CONTROL_CHARS, true);
-        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+        OBJECT_MAPPER.configure(JsonParser.Feature.ALLOW_COMMENTS, true);
+        OBJECT_MAPPER.configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
+        OBJECT_MAPPER.configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES, true);
+        OBJECT_MAPPER.configure(JsonParser.Feature.ALLOW_UNQUOTED_CONTROL_CHARS, true);
+        OBJECT_MAPPER.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        OBJECT_MAPPER.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
 
         SimpleModule module = new SimpleModule("DateTimeModule", Version.unknownVersion());
         module.addSerializer(Date.class, new FDateJsonSerializer());
         module.addDeserializer(Date.class, new FDateJsonDeserializer());
 
-        objectMapper.registerModule(module);
+        OBJECT_MAPPER.registerModule(module);
 
     }
 
+    @Override
     public <T> byte[] serialize(T obj) {
         if (obj == null) {
             return new byte[0];
         }
         try {
-            String json = objectMapper.writeValueAsString(obj);
+            String json = OBJECT_MAPPER.writeValueAsString(obj);
             return json.getBytes();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
+    @Override
     public <T> T deserialize(byte[] data, Class<T> clazz) {
         String json = new String(data);
         try {
-            return (T) objectMapper.readValue(json, clazz);
+            return (T) OBJECT_MAPPER.readValue(json, clazz);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

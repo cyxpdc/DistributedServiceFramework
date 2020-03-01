@@ -17,18 +17,18 @@ public class PropertyConfigeHelper {
     private static final Logger logger = LoggerFactory.getLogger(PropertyConfigeHelper.class);
 
     private static final String PROPERTY_CLASSPATH = "/ares_remoting.properties";
-    private static final Properties properties = new Properties();
+    private static final Properties PROPERTIES = new Properties();
 
     //ZK服务地址
     private static final String zkService;
     //ZK session超时时间
-    private static final int zkSessionTimeout;
+    private static final int ZK_SESSION_TIMEOUT;
     //ZK connection超时时间
-    private static final int zkConnectionTimeout;
+    private static final int ZK_CONNECTION_TIMEOUT;
     //序列化算法类型
-    private static final SerializeType serializeType;
+    private static final SerializeType SERIALIZE_TYPE;
     //每个服务端提供者的Netty的连接数
-    private static final int channelConnectSize;
+    private static final int CHANNEL_CONNECT_SIZE;
 
 
     /**
@@ -41,13 +41,13 @@ public class PropertyConfigeHelper {
             if (null == is) {
                 throw new IllegalStateException("ares_remoting.properties can not found in the classpath.");
             }
-            properties.load(is);
+            PROPERTIES.load(is);
 
-            zkService = properties.getProperty("zk_service");
-            zkSessionTimeout = Integer.parseInt(properties.getProperty("zk_sessionTimeout", "500"));
-            zkConnectionTimeout = Integer.parseInt(properties.getProperty("zk_connectionTimeout", "500"));
-            channelConnectSize = Integer.parseInt(properties.getProperty("channel_connect_size", "10"));
-            serializeType = SerializeType.queryByType(properties.getProperty("serialize_type","ProtoStuffSerializer"));
+            zkService = PROPERTIES.getProperty("zk_service");
+            ZK_SESSION_TIMEOUT = Integer.parseInt(PROPERTIES.getProperty("zk_sessionTimeout", "500"));
+            ZK_CONNECTION_TIMEOUT = Integer.parseInt(PROPERTIES.getProperty("zk_connectionTimeout", "500"));
+            CHANNEL_CONNECT_SIZE = Integer.parseInt(PROPERTIES.getProperty("channel_connect_size", "10"));
+            SERIALIZE_TYPE = SerializeType.queryByType(PROPERTIES.getProperty("serialize_type","ProtoStuffSerializer"));
         } catch (IOException e) {
             logger.warn("load ares_remoting's properties file failed.", e);
             throw new RuntimeException(e);
@@ -67,18 +67,18 @@ public class PropertyConfigeHelper {
     }
 
     public static int getZkSessionTimeout() {
-        return zkSessionTimeout;
+        return ZK_SESSION_TIMEOUT;
     }
 
     public static int getZkConnectionTimeout() {
-        return zkConnectionTimeout;
+        return ZK_CONNECTION_TIMEOUT;
     }
 
     public static int getChannelConnectSize() {
-        return channelConnectSize;
+        return CHANNEL_CONNECT_SIZE;
     }
 
     public static SerializeType getSerializeType() {
-        return serializeType;
+        return SERIALIZE_TYPE;
     }
 }

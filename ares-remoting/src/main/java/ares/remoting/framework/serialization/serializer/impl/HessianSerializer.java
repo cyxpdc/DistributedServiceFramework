@@ -14,6 +14,7 @@ import java.io.IOException;
  */
 public class HessianSerializer implements ISerializer {
 
+    @Override
     public byte[] serialize(Object obj) {
         if (obj == null) {
             throw new NullPointerException();
@@ -37,6 +38,7 @@ public class HessianSerializer implements ISerializer {
         }
     }
 
+    @Override
     public <T> T deserialize(byte[] data, Class<T> clazz) {
         if (data == null) {
             throw new NullPointerException();

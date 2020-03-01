@@ -108,8 +108,9 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
         }
         //连接zk,注册服务
         synchronized (RegisterCenter.class) {
-            if (zkClient == null)
+            if (zkClient == null) {
                 zkClient = new ZkClient(ZK_SERVICE, ZK_SESSION_TIME_OUT, ZK_CONNECTION_TIME_OUT, new SerializableSerializer());
+            }
             //创建 ZK命名空间/当前部署应用APP命名空间/
             boolean exist = zkClient.exists(ROOT_PATH);
             if (!exist) {
@@ -256,8 +257,9 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
         final Map<String, List<ProviderService>> providerServiceMap = Maps.newConcurrentMap();
         //连接zk
         synchronized (RegisterCenter.class) {
-            if (zkClient == null)
+            if (zkClient == null) {
                 zkClient = new ZkClient(ZK_SERVICE, ZK_SESSION_TIME_OUT, ZK_CONNECTION_TIME_OUT, new SerializableSerializer());
+            }
         }
         //从ZK获取对应的服务提供者列表，封装给新的providerServiceMap
         String providePath = ROOT_PATH + "/" + remoteAppKey + "/" + groupName;
@@ -415,7 +417,9 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
     private void addInvokerServices(String appKey, List<InvokerService> invokerServices, String group, String servicePath, String serviceType) {
         //获取ROOT_PATH + APP_KEY + group + service + serviceType 注册中心子目录列表
         List<String> invokers = getPath(servicePath, serviceType);
-        if (invokers == null) return;
+        if (invokers == null) {
+            return;
+        }
         //获取服务消费者信息
         for (String invoker : invokers) {
             InvokerService invokerService = new InvokerService();
@@ -429,7 +433,9 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
     private void addPrioverServices(String appKey, List<ProviderService> providerServices, String group, String servicePath, String serviceType) {
         //获取ROOT_PATH + APP_KEY + group + service + serviceType 注册中心子目录列表
         List<String> providers = getPath(servicePath, serviceType);
-        if (providers == null) return;
+        if (providers == null) {
+            return;
+        }
         //获取服务提供者信息
         for (String provider : providers) {
             String[] providerNodeArr = StringUtils.split(provider, "|");

@@ -21,25 +21,25 @@ public class RevokerResponseHolder {
     /**
      * 服务返回结果Map，key为唯一标识本次调用
      */
-    private static final Map<String, AresResponseWrapper> responseMap = Maps.newConcurrentMap();
+    private static final Map<String, AresResponseWrapper> RESPONSE_WRAPPER_MAP = Maps.newConcurrentMap();
     /**
-     * 清除过期的返回结果
+     * 清除过期的返回结果，建议手动创建线程池
      */
-    private static final ExecutorService removeExpireKeyExecutor = Executors.newSingleThreadExecutor();
+    private static final ExecutorService REMOVE_EXPIRE_KEY_EXECUTOR = Executors.newSingleThreadExecutor();
 
     /**
      * 删除超时未获取到结果的key,防止内存泄露
      */
     static {
-        removeExpireKeyExecutor.execute(new Runnable() {
+        REMOVE_EXPIRE_KEY_EXECUTOR.execute(new Runnable() {
             @Override
             public void run() {
                 while (true) {
                     try {
-                        for (Map.Entry<String, AresResponseWrapper> entry : responseMap.entrySet()) {
+                        for (Map.Entry<String, AresResponseWrapper> entry : RESPONSE_WRAPPER_MAP.entrySet()) {
                             boolean isExpire = entry.getValue().isExpire();
                             if (isExpire) {
-                                responseMap.remove(entry.getKey());
+                                RESPONSE_WRAPPER_MAP.remove(entry.getKey());
                             }
                             Thread.sleep(10);
                         }
@@ -57,7 +57,7 @@ public class RevokerResponseHolder {
      * @param requestUniqueKey
      */
     public static void initResponseData(String requestUniqueKey) {
-        responseMap.put(requestUniqueKey, AresResponseWrapper.of());
+        RESPONSE_WRAPPER_MAP.put(requestUniqueKey, AresResponseWrapper.of());
     }
 
 
@@ -68,10 +68,10 @@ public class RevokerResponseHolder {
      */
     public static void putResultValue(AresResponse response) {
         long currentTime = System.currentTimeMillis();
-        AresResponseWrapper responseWrapper = responseMap.get(response.getUniqueKey());
+        AresResponseWrapper responseWrapper = RESPONSE_WRAPPER_MAP.get(response.getUniqueKey());
         responseWrapper.setResponseTime(currentTime);
         responseWrapper.getResponseQueue().add(response);
-        responseMap.put(response.getUniqueKey(), responseWrapper);
+        RESPONSE_WRAPPER_MAP.put(response.getUniqueKey(), responseWrapper);
     }
 
 
@@ -82,13 +82,13 @@ public class RevokerResponseHolder {
      * @return
      */
     public static AresResponse getValue(String requestUniqueKey, long timeout) {
-        AresResponseWrapper responseWrapper = responseMap.get(requestUniqueKey);
+        AresResponseWrapper responseWrapper = RESPONSE_WRAPPER_MAP.get(requestUniqueKey);
         try {
             return responseWrapper.getResponseQueue().poll(timeout, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         } finally {
-            responseMap.remove(requestUniqueKey);
+            RESPONSE_WRAPPER_MAP.remove(requestUniqueKey);
         }
     }
 }

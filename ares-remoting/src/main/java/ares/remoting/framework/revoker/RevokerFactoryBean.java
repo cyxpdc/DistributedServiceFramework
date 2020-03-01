@@ -49,6 +49,7 @@ public class RevokerFactoryBean implements FactoryBean, InitializingBean {
     /**
      * context.getbean真正获得的对象
      * 返回服务提供者代理对象，此处为RevokerProxyBeanFactory
+     *
      * @return
      * @throws Exception
      */

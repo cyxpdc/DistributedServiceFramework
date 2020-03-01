@@ -12,6 +12,7 @@ import java.io.*;
  */
 public class DefaultJavaSerializer implements ISerializer {
 
+    @Override
     public <T> byte[] serialize(T obj) {
         ByteArrayOutputStream byteArrayOutputStream = null;
         ObjectOutputStream objectOutputStream = null;
@@ -33,6 +34,7 @@ public class DefaultJavaSerializer implements ISerializer {
     }
 
 
+    @Override
     public <T> T deserialize(byte[] data, Class<T> clazz) {
         ByteArrayInputStream byteArrayInputStream = null;
         ObjectInputStream objectInputStream = null;

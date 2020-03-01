@@ -38,6 +38,7 @@ public class ProtoStuffSerializer implements ISerializer {
         return schema;
     }
 
+    @Override
     public <T> byte[] serialize(T obj) {
         Class<T> cls = (Class<T>) obj.getClass();
         LinkedBuffer buffer = LinkedBuffer.allocate(LinkedBuffer.DEFAULT_BUFFER_SIZE);
@@ -51,6 +52,7 @@ public class ProtoStuffSerializer implements ISerializer {
         }
     }
 
+    @Override
     public <T> T deserialize(byte[] data, Class<T> cls) {
         try {
             //如果使用Java反射，则代码为

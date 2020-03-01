@@ -121,18 +121,18 @@ public class RevokerProxyBeanFactory implements InvocationHandler {
     }
 
     // 创建锁与条件变量
-    private static final Lock lock = new ReentrantLock();
+    private static final Lock LOCK = new ReentrantLock();
 
-    private static final Condition done = lock.newCondition();
+    private static final Condition DONE = LOCK.newCondition();
 
     private static AresResponse response  = null;
     // 调用方通过该方法等待结果
     private Object get(long timeout){
         long start = System.nanoTime();
-        lock.lock();
+        LOCK.lock();
         try {
             while (!isDone()) {
-                done.await(timeout,TimeUnit.SECONDS);
+                DONE.await(timeout,TimeUnit.SECONDS);
                 long cur=System.nanoTime();
                 if (isDone() || cur-start > timeout){
                     break;
@@ -141,7 +141,7 @@ public class RevokerProxyBeanFactory implements InvocationHandler {
         } catch (InterruptedException e) {
             LOGGER.error("InterruptedException ： " + e);
         } finally {
-            lock.unlock();
+            LOCK.unlock();
         }
         if(!isDone()){
             return null;
@@ -154,14 +154,14 @@ public class RevokerProxyBeanFactory implements InvocationHandler {
     }
     // RPC 结果返回时调用该方法
     public static void doReceived(AresResponse res) {
-        lock.lock();
+        LOCK.lock();
         try {
             response = res;
-            if (done != null) {
-                done.signal();
+            if (DONE != null) {
+                DONE.signal();
             }
         } finally {
-            lock.unlock();
+            LOCK.unlock();
         }
     }
 }

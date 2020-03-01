@@ -23,6 +23,7 @@ public class ProtocolBufferSerializer implements ISerializer {
      * @param <T> 返回的字节数据
      * @return
      */
+    @Override
     public <T> byte[] serialize(T obj){
         try {
             //需要其父类为GeneratedMessageV3
@@ -36,6 +37,7 @@ public class ProtocolBufferSerializer implements ISerializer {
         return null;
     }
 
+    @Override
     public <T> T deserialize(byte[] data, Class<T> cls) {
         try {
             //需要其父类为GeneratedMessageV3

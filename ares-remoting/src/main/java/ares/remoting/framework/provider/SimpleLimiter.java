@@ -20,7 +20,7 @@ class SimpleLimiter {
     //下⼀令牌产⽣时间
     private long next = System.nanoTime();
     //发放令牌间隔：纳秒
-    private static final long interval = 1000_000_000;
+    private static final long INTERVAL = 1000_000_000;
 
     /**
      * 初始时，系统就开始产生令牌，不过没有使用后台线程来往令牌桶里加令牌，所以需要在代码里的(now - next) / interval计算
@@ -40,7 +40,7 @@ class SimpleLimiter {
         synchronized(this){
             if (now > next) {//判断是否可以往令牌桶里加令牌
                 //新产⽣的令牌数,可能为0、1..，为整数
-                long newPermits = (now - next) / interval;
+                long newPermits = (now - next) / INTERVAL;
                 //新令牌增加到令牌桶
                 storedPermits = Math.min(maxPermits,storedPermits + newPermits);
                 //将下⼀个令牌发放时间设置为当前时间
@@ -52,7 +52,7 @@ class SimpleLimiter {
             //令牌桶中能提供的令牌是否有一个，如果没有，则需要预支令牌
             long fb = Math.min(1, storedPermits);
             long nr = 1 - fb;
-            next += nr * interval;//如果nr等于1，代表需要预支一个，当前next被预支了，所以需要走到下一个next，即+= nr * interval
+            next += nr * INTERVAL;//如果nr等于1，代表需要预支一个，当前next被预支了，所以需要走到下一个next，即+= nr * interval
             this.storedPermits -= fb;
         }
         //按照条件等待，预支令牌的请求则需要等

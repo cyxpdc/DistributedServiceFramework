@@ -13,6 +13,7 @@ import org.apache.thrift.protocol.TCompactProtocol;
  */
 public class ThriftSerializer implements ISerializer {
 
+    @Override
     public <T> byte[] serialize(T obj) {
         try {
             if (!(obj instanceof TBase)) {
@@ -25,6 +26,7 @@ public class ThriftSerializer implements ISerializer {
         }
     }
 
+    @Override
     public <T> T deserialize(byte[] data, Class<T> cls) {
         try {
             if (!TBase.class.isAssignableFrom(cls)) {

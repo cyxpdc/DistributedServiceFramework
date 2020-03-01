@@ -13,14 +13,14 @@ import java.util.Map;
  */
 public class ClusterEngine {
 
-    private static final Map<ClusterStrategyEnum, ClusterStrategy> clusterStrategyMap = Maps.newConcurrentMap();
+    private static final Map<ClusterStrategyEnum, ClusterStrategy> CLUSTER_STRATEGY_MAP = Maps.newConcurrentMap();
 
     static {
-        clusterStrategyMap.put(ClusterStrategyEnum.Random, new RandomClusterStrategyImpl());
-        clusterStrategyMap.put(ClusterStrategyEnum.WeightRandom, new WeightRandomClusterStrategyImpl());
-        clusterStrategyMap.put(ClusterStrategyEnum.Polling, new PollingClusterStrategyImpl());
-        clusterStrategyMap.put(ClusterStrategyEnum.WeightPolling, new WeightPollingClusterStrategyImpl());
-        clusterStrategyMap.put(ClusterStrategyEnum.Hash, new HashClusterStrategyImpl());
+        CLUSTER_STRATEGY_MAP.put(ClusterStrategyEnum.Random, new RandomClusterStrategyImpl());
+        CLUSTER_STRATEGY_MAP.put(ClusterStrategyEnum.WeightRandom, new WeightRandomClusterStrategyImpl());
+        CLUSTER_STRATEGY_MAP.put(ClusterStrategyEnum.Polling, new PollingClusterStrategyImpl());
+        CLUSTER_STRATEGY_MAP.put(ClusterStrategyEnum.WeightPolling, new WeightPollingClusterStrategyImpl());
+        CLUSTER_STRATEGY_MAP.put(ClusterStrategyEnum.Hash, new HashClusterStrategyImpl());
     }
 
     /**
@@ -34,6 +34,6 @@ public class ClusterEngine {
             //默认选择随机算法
             return new RandomClusterStrategyImpl();
         }
-        return clusterStrategyMap.get(clusterStrategyEnum);
+        return CLUSTER_STRATEGY_MAP.get(clusterStrategyEnum);
     }
 }

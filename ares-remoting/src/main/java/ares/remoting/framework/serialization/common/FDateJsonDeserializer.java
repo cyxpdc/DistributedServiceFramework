@@ -18,7 +18,7 @@ import java.util.Date;
 public class FDateJsonDeserializer extends JsonDeserializer<Date> {
 
     static final String PATTERN = "yyyy-MM-dd HH:mm:ss";
-    static final DateTimeFormatter fmt = DateTimeFormat.forPattern(PATTERN);
+    static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormat.forPattern(PATTERN);
 
 
     @Override
@@ -31,7 +31,7 @@ public class FDateJsonDeserializer extends JsonDeserializer<Date> {
             return new Date(Long.valueOf(date));
         }
         try {
-            DateTime dt = fmt.parseDateTime(date);
+            DateTime dt = DATE_TIME_FORMATTER.parseDateTime(date);
             return dt.toDate();
         } catch (Exception e) {
             throw new RuntimeException(e);

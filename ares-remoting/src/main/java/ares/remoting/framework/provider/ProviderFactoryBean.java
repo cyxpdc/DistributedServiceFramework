@@ -13,6 +13,7 @@ import java.util.List;
 /**
  * 服务Bean发布入口
  * 实现FactoryBean，作为bean注册到Spring中
+ *
  * @author pdc
  */
 
@@ -66,6 +67,7 @@ public class ProviderFactoryBean implements FactoryBean, InitializingBean {
 
     /**
      * context.getbean真正获得的对象
+     *
      * @return
      * @throws Exception
      */
@@ -77,10 +79,11 @@ public class ProviderFactoryBean implements FactoryBean, InitializingBean {
     /**
      * SpringBean初始化时自动执行一次
      * 用于启动Netty发布服务、将服务信息写入zookeeper
+     *
      * @throws Exception
      */
     @Override
-    public void afterPropertiesSet(){
+    public void afterPropertiesSet() {
         //启动Netty服务端，里面加了锁和使用单例，保证服务端只会启动一次
         NettyServer.singleton().start(Integer.parseInt(serverPort));
         //完成服务端信息的注册

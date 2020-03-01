@@ -33,20 +33,20 @@ public class NettyChannelPoolFactory {
 
     private static final Logger logger = LoggerFactory.getLogger(NettyChannelPoolFactory.class);
 
-    private static final NettyChannelPoolFactory channelPoolFactory = new NettyChannelPoolFactory();
+    private static final NettyChannelPoolFactory CHANNEL_POOL_FACTORY = new NettyChannelPoolFactory();
 
     /**
      * Key为服务提供者地址,即机器，Value为Netty Channel阻塞队列
      */
-    private static final Map<InetSocketAddress, ArrayBlockingQueue<Channel>> channelPoolMap = Maps.newConcurrentMap();
+    private static final Map<InetSocketAddress, ArrayBlockingQueue<Channel>> CHANNEL_POOL_MAP = Maps.newConcurrentMap();
     /**
      * 初始化Netty Channel阻塞队列的长度,该值为可配置信息
      */
-    private static final int channelConnectSize = PropertyConfigeHelper.getChannelConnectSize();
+    private static final int CHANNEL_CONNECT_SIZE = PropertyConfigeHelper.getChannelConnectSize();
     /**
      * 初始化序列化协议类型,该值为可配置信息
      */
-    private static final SerializeType serializeType = PropertyConfigeHelper.getSerializeType();
+    private static final SerializeType SERIALIZE_TYPE = PropertyConfigeHelper.getSerializeType();
     /**
      * 服务提供者列表
      */
@@ -65,7 +65,9 @@ public class NettyChannelPoolFactory {
         //将服务提供者信息存入serviceMetaDataList列表
         Collection<List<ProviderService>> collectionServiceMetaDataList = providerMap.values();
         for (List<ProviderService> serviceMetaDataModels : collectionServiceMetaDataList) {
-            if (CollectionUtils.isEmpty(serviceMetaDataModels)) continue;
+            if (CollectionUtils.isEmpty(serviceMetaDataModels)) {
+                continue;
+            }
             serviceMetaDataList.addAll(serviceMetaDataModels);
         }
         //获取服务提供者地址列表，通过查看hashmap的putval和InetSocketAddress的equals，可知ip和port相同就相同
@@ -79,7 +81,7 @@ public class NettyChannelPoolFactory {
         //根据服务提供者地址列表初始化Channel阻塞队列
         //并以地址为Key,地址对应的Channel阻塞队列为value,存入channelPoolMap
         for (InetSocketAddress socketAddress : socketAddressSet) {
-            for(int realChannelConnectSize = 0;realChannelConnectSize < channelConnectSize;realChannelConnectSize++){
+            for(int realChannelConnectSize = 0; realChannelConnectSize < CHANNEL_CONNECT_SIZE; realChannelConnectSize++){
                 Channel channel = null;
                 while (channel == null) {
                     //若channel不存在,则注册新的Channel与服务端进行通信
@@ -87,10 +89,10 @@ public class NettyChannelPoolFactory {
                 }
                 //将阻塞队列channelArrayBlockingQueue作为value存入channelPoolMap
                 //并将新注册的Netty Channel存入阻塞队列channelArrayBlockingQueue
-                ArrayBlockingQueue<Channel> channelArrayBlockingQueue = channelPoolMap.get(socketAddress);
+                ArrayBlockingQueue<Channel> channelArrayBlockingQueue = CHANNEL_POOL_MAP.get(socketAddress);
                 if (channelArrayBlockingQueue == null) {
-                    channelArrayBlockingQueue = new ArrayBlockingQueue<>(channelConnectSize);
-                    channelPoolMap.put(socketAddress, channelArrayBlockingQueue);
+                    channelArrayBlockingQueue = new ArrayBlockingQueue<>(CHANNEL_CONNECT_SIZE);
+                    CHANNEL_POOL_MAP.put(socketAddress, channelArrayBlockingQueue);
                 }
                 channelArrayBlockingQueue.offer(channel);
             }
@@ -104,7 +106,7 @@ public class NettyChannelPoolFactory {
      * @return
      */
     public ArrayBlockingQueue<Channel> acquire(InetSocketAddress socketAddress) {
-        return channelPoolMap.get(socketAddress);
+        return CHANNEL_POOL_MAP.get(socketAddress);
     }
 
     /**
@@ -115,7 +117,9 @@ public class NettyChannelPoolFactory {
      * @param inetSocketAddress
      */
     public void release(ArrayBlockingQueue<Channel> arrayBlockingQueue, Channel channel, InetSocketAddress inetSocketAddress) {
-        if (arrayBlockingQueue == null) return;
+        if (arrayBlockingQueue == null) {
+            return;
+        }
         //回收之前先检查channel是否可用,不可用的话,重新注册一个,放入阻塞队列
         if (channel == null || !channel.isActive() || !channel.isOpen() || !channel.isWritable()) {
             if (channel != null) {
@@ -151,9 +155,9 @@ public class NettyChannelPoolFactory {
                         @Override
                         public void initChannel(SocketChannel ch) throws Exception {
                             //注册Netty编码器
-                            ch.pipeline().addLast(new NettyEncoderHandler(serializeType));
+                            ch.pipeline().addLast(new NettyEncoderHandler(SERIALIZE_TYPE));
                             //注册Netty解码器
-                            ch.pipeline().addLast(new NettyDecoderHandler(AresResponse.class, serializeType));
+                            ch.pipeline().addLast(new NettyDecoderHandler(AresResponse.class, SERIALIZE_TYPE));
                             //注册客户端业务逻辑处理handler
                             ch.pipeline().addLast(new NettyClientInvokeHandler());
                         }
@@ -189,6 +193,6 @@ public class NettyChannelPoolFactory {
     }
 
     public static NettyChannelPoolFactory singleton() {
-        return channelPoolFactory;
+        return CHANNEL_POOL_FACTORY;
     }
 }
