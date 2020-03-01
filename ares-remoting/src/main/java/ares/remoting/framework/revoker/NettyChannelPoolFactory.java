@@ -141,7 +141,7 @@ public class NettyChannelPoolFactory {
      */
     public Channel registerChannel(InetSocketAddress socketAddress) {
         try {
-            EventLoopGroup group = new NioEventLoopGroup(10);
+            EventLoopGroup group = new NioEventLoopGroup();
             Bootstrap bootstrap = new Bootstrap();
             bootstrap.remoteAddress(socketAddress);
             bootstrap.group(group)

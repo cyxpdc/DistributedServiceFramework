@@ -71,9 +71,9 @@ public class RevokerProxyBeanFactory implements InvocationHandler {
         //根据软负载策略,从服务提供者列表选取本次调用的服务提供者
         ClusterStrategy clusterStrategyService = ClusterEngine.queryClusterStrategy(clusterStrategy);
         ProviderService providerService = clusterStrategyService.select(providerServices);
-        //复制一份服务提供者信息
+        //复制一份服务提供者信息,保持原先的服务不变
         ProviderService curProvider = providerService.copy();
-        //设置本次调用服务的方法以及接口（负载均衡策略中有些权重算法创建了新的ProviderService，这里设置一下比较保险）
+        //设置本次调用服务的方法以及接口，方便服务端判断
         curProvider.setServiceMethod(method);
         curProvider.setServiceItf(targetInterface);
 

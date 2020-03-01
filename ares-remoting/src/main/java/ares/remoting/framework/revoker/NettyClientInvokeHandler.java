@@ -10,9 +10,6 @@ import io.netty.channel.SimpleChannelInboundHandler;
  */
 public class NettyClientInvokeHandler extends SimpleChannelInboundHandler<AresResponse> {
 
-    public NettyClientInvokeHandler() {
-    }
-
     /**
      * 服务端响应请求返回数据的时候会自动调用该方法
      * 我们通过实现该方法来接收服务端返回的数据,并实现客户端调用的业务逻辑：
