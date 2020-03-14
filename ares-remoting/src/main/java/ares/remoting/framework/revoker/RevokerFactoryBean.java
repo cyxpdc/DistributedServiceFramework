@@ -23,7 +23,7 @@ public class RevokerFactoryBean implements FactoryBean, InitializingBean {
      * 用来匹配从服务注册中心获取到本地缓存的服务提供者，得到匹配服务接口的服务提供者列表
      * 再根据软负载策略选取某一个服务提供者，发起调用
      */
-    private Class<?> serviceInterface;
+    private Class<?> targetInterface;
     /**
      * 超时时间
      */
@@ -71,11 +71,11 @@ public class RevokerFactoryBean implements FactoryBean, InitializingBean {
         }
         NettyChannelPoolFactory.singleton().initChannelPoolFactory(providerMap);
         //获取RevokerProxyBeanFactory服务提供者代理对象
-        RevokerProxyBeanFactory proxyFactory = RevokerProxyBeanFactory.singleton(serviceInterface, timeout, clusterStrategy);
+        RevokerProxyBeanFactory proxyFactory = RevokerProxyBeanFactory.singleton(targetInterface, timeout, clusterStrategy);
         this.serviceObject = proxyFactory.getProxy();
         //将消费者信息注册到注册中心，为服务治理功能做数据准备
         InvokerService invoker = new InvokerService();
-        invoker.setServiceItf(serviceInterface);
+        invoker.setServiceItf(targetInterface);
         invoker.setRemoteAppKey(remoteAppKey);
         invoker.setGroupName(groupName);
         registerCenter4Consumer.registerInvoker(invoker);
@@ -83,7 +83,7 @@ public class RevokerFactoryBean implements FactoryBean, InitializingBean {
 
     @Override
     public Class<?> getObjectType() {
-        return serviceInterface;
+        return targetInterface;
     }
 
     @Override

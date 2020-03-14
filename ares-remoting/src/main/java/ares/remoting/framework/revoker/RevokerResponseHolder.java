@@ -31,23 +31,20 @@ public class RevokerResponseHolder {
      * 删除超时未获取到结果的key,防止内存泄露
      */
     static {
-        REMOVE_EXPIRE_KEY_EXECUTOR.execute(new Runnable() {
-            @Override
-            public void run() {
-                while (true) {
-                    try {
-                        for (Map.Entry<String, AresResponseWrapper> entry : RESPONSE_WRAPPER_MAP.entrySet()) {
-                            boolean isExpire = entry.getValue().isExpire();
-                            if (isExpire) {
-                                RESPONSE_WRAPPER_MAP.remove(entry.getKey());
-                            }
-                            Thread.sleep(10);
+        REMOVE_EXPIRE_KEY_EXECUTOR.execute(() -> {
+            while (true) {
+                try {
+                    for (Map.Entry<String, AresResponseWrapper> entry : RESPONSE_WRAPPER_MAP.entrySet()) {
+                        boolean isExpire = entry.getValue().isExpire();
+                        if (isExpire) {
+                            RESPONSE_WRAPPER_MAP.remove(entry.getKey());
                         }
-                    } catch (InterruptedException e) {
-                        LOGGER.warn("Thread.sleep failure" + e);
+                        Thread.sleep(10);
                     }
-
+                } catch (InterruptedException e) {
+                    LOGGER.warn("Thread.sleep failure" + e);
                 }
+
             }
         });
     }

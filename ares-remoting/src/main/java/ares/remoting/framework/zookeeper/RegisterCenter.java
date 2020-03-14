@@ -198,7 +198,7 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
 
     /**
      * 初始化服务提供者信息客户端本地缓存serviceMetaDataMap4Consume
-     * 这里则需要上下线，需要消费端需要获取所有服务信息，且只有这一个入口，不像服务端，上线是一个入口(FactoryBean)下线是一个入口(refreshActivityService)
+     * 这里则需要上下线，需要消费端需要获取所有服务信息
      * @param remoteAppKey
      * @param groupName
      */
@@ -282,7 +282,7 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
             //用来添加新服务
             ProviderService flag = null;
             //保存还拥有的服务，如果有下线了的服务器的话
-            flag = saveOldService(curServiceIpList, oldServiceList, newProviderServiceList, flag);
+            saveOldService(curServiceIpList, oldServiceList, newProviderServiceList, flag);
             //保存新上线的服务，如果有的话
             saveNewService(curServiceIpList, newProviderServiceList, flag);
             newServiceMetaDataMap.put(serviceItfKey, newProviderServiceList);
@@ -292,7 +292,7 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
         changed = true;
     }
 
-    private ProviderService saveOldService(List<String> curServiceIpList, List<ProviderService> oldServiceList, List<ProviderService> newProviderServiceList, ProviderService flag) {
+    private void saveOldService(List<String> curServiceIpList, List<ProviderService> oldServiceList, List<ProviderService> newProviderServiceList, ProviderService flag) {
         for (ProviderService oldServiceMetaData : oldServiceList) {
             if (curServiceIpList.contains(oldServiceMetaData.getServerIp())) {
                 newProviderServiceList.add(oldServiceMetaData);
@@ -302,7 +302,6 @@ public class RegisterCenter implements IRegisterCenter4Invoker, IRegisterCenter4
                 curServiceIpList.remove(oldServiceMetaData.getServerIp());
             }
         }
-        return flag;
     }
 
     private void saveNewService(List<String> curServiceIpList, List<ProviderService> newProviderServiceList, ProviderService flag) {

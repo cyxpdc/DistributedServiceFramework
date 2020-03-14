@@ -34,8 +34,6 @@ public class RevokerProxyBeanFactory implements InvocationHandler {
      */
     private ExecutorService fixedThreadPool = null;
 
-    private static volatile RevokerProxyBeanFactory singleton;
-
     //服务接口
     private Class<?> targetInterface;
     //超时时间
@@ -53,14 +51,7 @@ public class RevokerProxyBeanFactory implements InvocationHandler {
     }
 
     public static RevokerProxyBeanFactory singleton(Class<?> targetInterface, int consumeTimeout, String clusterStrategy) throws Exception {
-        if (null == singleton) {
-            synchronized (RevokerProxyBeanFactory.class) {
-                if (null == singleton) {
-                    singleton = new RevokerProxyBeanFactory(targetInterface, consumeTimeout, clusterStrategy);
-                }
-            }
-        }
-        return singleton;
+        return new RevokerProxyBeanFactory(targetInterface, consumeTimeout, clusterStrategy);
     }
 
     @Override

@@ -62,6 +62,9 @@ public class NettyChannelPoolFactory {
      * @param providerMap
      */
     public void initChannelPoolFactory(Map<String, List<ProviderService>> providerMap) {
+        if(CHANNEL_POOL_MAP.size() != 0){
+            return ;
+        }
         //将服务提供者信息存入serviceMetaDataList列表
         Collection<List<ProviderService>> collectionServiceMetaDataList = providerMap.values();
         for (List<ProviderService> serviceMetaDataModels : collectionServiceMetaDataList) {
